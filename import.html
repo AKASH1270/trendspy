@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trendspy — Secure Product Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0a0f1e;--accent:#06b6d4;--accent2:#60a5fa;--muted:#94a3b8;
+  --glass:rgba(255,255,255,0.05);
+  font-family:'Poppins',sans-serif;color:#e6eef8;
+}
+body{
+  margin:0;background:radial-gradient(circle at top,#0f172a,#0a0f1f);
+  display:flex;flex-direction:column;align-items:center;padding:20px;text-align:center;
+}
+.container{
+  background:var(--glass);border-radius:14px;padding:20px;
+  max-width:850px;width:100%;box-shadow:0 0 25px rgba(6,182,212,0.15);
+}
+h1{margin:6px 0;}
+button{
+  padding:8px 14px;border-radius:8px;border:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#031d25;font-weight:600;cursor:pointer;
+  box-shadow:0 0 10px rgba(6,182,212,0.4);
+}
+button.ghost{
+  background:transparent;border:1px solid rgba(255,255,255,0.15);
+  color:#e6eef8;box-shadow:none;
+}
+input,select{
+  padding:8px;border-radius:8px;margin:4px;width:100%;
+  border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;
+}
+input[type=file]{
+  border:1px dashed rgba(255,255,255,0.15);
+  color:#94a3b8;background:rgba(255,255,255,0.02);
+}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+th,td{border-bottom:1px solid rgba(255,255,255,0.08);padding:6px;text-align:left}
+tr:hover{background:rgba(255,255,255,0.05)}
+footer{margin-top:20px;font-size:12px;color:var(--muted)}
+#denied{color:#ef4444;font-weight:600;margin-top:20px}
+form{margin-top:10px;text-align:left}
+fieldset{
+  border:1px solid rgba(255,255,255,0.1);
+  padding:10px;border-radius:10px;margin-top:10px;
+  background:rgba(255,255,255,0.02);
+}
+legend{color:var(--accent);padding:0 6px;font-weight:600;}
+#bulkDeleteBtn{display:none;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="container" id="main">
+  <h1>🧩 Product Management</h1>
+  <p style="color:var(--muted)">Add, import, update, or delete multiple products. Accessible only from Admin Dashboard.</p>
+
+  <!-- Add Product Form -->
+  <fieldset>
+    <legend>Add / Edit Product</legend>
+    <form id="productForm">
+      <input type="hidden" id="pid">
+      <label>Title:</label><input id="title" required>
+      <label>Category:</label><input id="category" placeholder="e.g. Electronics">
+      <label>Price:</label><input id="price" type="number" required>
+      <label>Discount Price:</label><input id="discountPrice" type="number">
+      <label>Image URL:</label><input id="image" placeholder="https://picsum.photos/400">
+      <button type="submit">💾 Save Product</button>
+    </form>
+  </fieldset>
+
+  <!-- Import Excel -->
+  <fieldset>
+    <legend>Import from Excel</legend>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+    <button id="importBtn">📥 Import Excel</button>
+  </fieldset>
+
+  <div id="productTable"></div>
+  <button id="bulkDeleteBtn" class="ghost">🗑 Delete Selected Products</button>
+  <button class="ghost" style="margin-top:10px" onclick="window.location.href='shop.html'">⬅ Back to Dashboard</button>
+</div>
+
+<div id="denied" style="display:none">🚫 Access Denied. Please open this page from Admin Dashboard.</div>
+
+<footer>© 2025 Trendspy | Secure Product CRUD Manager</footer>
+
+<script>
+const el=id=>document.getElementById(id);
+const urlParams=new URLSearchParams(window.location.search);
+const authKey=urlParams.get('auth');
+
+/* === Access Control === */
+if(authKey!=='trendspy-admin'){
+  el('main').style.display='none';
+  el('denied').style.display='block';
+  throw new Error('Unauthorized Access');
+}
+
+/* === Data Load === */
+let products=JSON.parse(localStorage.getItem('products')||'[]');
+function save(){localStorage.setItem('products',JSON.stringify(products));}
+function toast(m){const t=document.createElement('div');Object.assign(t.style,{position:'fixed',bottom:'18px',right:'18px',background:'rgba(0,0,0,0.8)',padding:'8px 12px',borderRadius:'8px',fontSize:'12px',zIndex:9999});t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1200);}
+
+/* === Render Table === */
+function renderTable(){
+  const c=el('productTable');
+  if(!products.length){c.innerHTML='<div style="margin-top:12px;color:#94a3b8;">No products available</div>';el('bulkDeleteBtn').style.display='none';return;}
+  c.innerHTML=`<table>
+    <thead><tr><th><input type="checkbox" id="selectAll"></th><th>Title</th><th>Category</th><th>Price</th><th>Discount</th><th>Action</th></tr></thead>
+    <tbody>${products.map(p=>`
+      <tr>
+        <td><input type="checkbox" class="select" data-id="${p.id}"></td>
+        <td>${p.title}</td>
+        <td>${p.category}</td>
+        <td>₹${p.price}</td>
+        <td>${p.discountPrice||'-'}</td>
+        <td>
+          <button class='ghost' onclick="editProduct(${p.id})">✏ Edit</button>
+          <button class='ghost' onclick="deleteProduct(${p.id})">🗑 Delete</button>
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  el('bulkDeleteBtn').style.display='block';
+  el('selectAll').onchange=e=>{
+    document.querySelectorAll('.select').forEach(cb=>cb.checked=e.target.checked);
+  };
+}
+
+/* === Add / Edit Product === */
+el('productForm').onsubmit=e=>{
+  e.preventDefault();
+  const pid=el('pid').value;
+  const newProduct={
+    id:pid?parseInt(pid):Date.now(),
+    title:el('title').value.trim(),
+    category:el('category').value.trim()||'General',
+    price:parseInt(el('price').value),
+    discountPrice:parseInt(el('discountPrice').value)||0,
+    image:el('image').value.trim()||'https://picsum.photos/400'
+  };
+  if(pid){
+    const idx=products.findIndex(p=>p.id==pid);
+    products[idx]=newProduct;
+    toast('✅ Product updated');
+  } else {
+    products.push(newProduct);
+    toast('✅ Product added');
+  }
+  el('productForm').reset();
+  el('pid').value='';
+  save();renderTable();
+};
+function editProduct(id){
+  const p=products.find(x=>x.id===id);
+  if(!p)return;
+  el('pid').value=p.id;
+  el('title').value=p.title;
+  el('category').value=p.category;
+  el('price').value=p.price;
+  el('discountPrice').value=p.discountPrice;
+  el('image').value=p.image;
+  toast('✏ Edit mode active');
+}
+function deleteProduct(id){
+  if(!confirm('Delete this product?'))return;
+  products=products.filter(p=>p.id!==id);
+  save();renderTable();toast('🗑 Product deleted');
+}
+
+/* === Delete Multiple === */
+el('bulkDeleteBtn').onclick=()=>{
+  const selected=[...document.querySelectorAll('.select:checked')].map(cb=>+cb.dataset.id);
+  if(!selected.length)return toast('No products selected');
+  if(!confirm('Delete selected products?'))return;
+  products=products.filter(p=>!selected.includes(p.id));
+  save();renderTable();toast('🗑 Multiple products deleted');
+};
+
+/* === Excel Import === */
+el('importBtn').onclick=()=>{
+  const file=el('fileInput').files[0];
+  if(!file)return alert('Select an Excel file first.');
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const json=XLSX.utils.sheet_to_json(sheet);
+    const imported=json.map((p,i)=>({
+      id:Date.now()+i,
+      title:p.Title||p.name||p.Product||`Item ${i+1}`,
+      price:parseInt(p.Price)||0,
+      discountPrice:parseInt(p.DiscountPrice)||0,
+      category:p.Category||'general',
+      image:p.Image||'https://picsum.photos/400?random='+(i+1)
+    }));
+    products=[...products,...imported];
+    save();renderTable();toast('📥 Products imported successfully!');
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+/* === Init === */
+renderTable();
+window.addEventListener('storage',()=>location.reload());
+</script>
+</body>
+</html>
