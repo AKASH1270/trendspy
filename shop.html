@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trendspy — Fashion Admin Dashboard</title>
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+:root {
+  --bg: #0b0f1e;
+  --glass: rgba(255,255,255,0.06);
+  --accent: #ec4899;
+  --accent2: #8b5cf6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warn: #fbbf24;
+  --muted: #94a3b8;
+  font-family: 'Poppins', sans-serif;
+  color: #e6eef8;
+}
+
+/* Body */
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1a1035 0%, #0a0f1f 100%);
+  overflow-x: hidden;
+}
+.wrap { max-width: 1200px; margin: 20px auto; padding: 20px; }
+
+/* Header */
+header.top {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+  gap: 10px; background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  border-radius: 16px; padding: 18px 24px;
+  box-shadow: 0 0 20px rgba(236,72,153,0.3);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: linear-gradient(135deg,var(--accent),var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  color: #1a0327; font-weight: 700; font-size: 20px;
+  box-shadow: 0 0 15px rgba(236,72,153,0.5);
+}
+h1 {
+  font-size: 22px; margin: 0;
+  background: linear-gradient(90deg,var(--accent),var(--accent2));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.lead { font-size: 12px; color: var(--muted); }
+
+/* Buttons */
+button {
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--glass);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: inherit;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button.primary {
+  background: linear-gradient(90deg,var(--accent),var(--accent2));
+  color: #fff;
+  border: 0;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(236,72,153,0.4);
+}
+button.primary:hover { transform: translateY(-1px); filter: brightness(1.15); }
+button.danger {
+  background: linear-gradient(90deg,#ef4444,#dc2626);
+  color: white; border: 0; font-weight: 600;
+}
+button.ghost {
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--muted);
+}
+
+/* Cards */
+.card {
+  background: var(--glass);
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: inset 0 0 10px rgba(255,255,255,0.02);
+  transition: 0.3s;
+}
+.card:hover { box-shadow: 0 0 10px rgba(236,72,153,0.3); }
+
+/* Status Colors */
+.status { font-weight: 700; text-transform: capitalize; }
+.status.pending { color: var(--warn); }
+.status.accepted { color: var(--accent2); }
+.status.delivered { color: var(--success); }
+.status.cancelled, .status.rejected { color: var(--danger); }
+.status.paid { color: var(--success); }
+.remark { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* Tracking Bar */
+.tracking-bar {
+  display: flex; justify-content: space-between; position: relative; margin-top: 10px;
+}
+.tracking-bar::before {
+  content:'';position:absolute;top:50%;left:0;right:0;height:4px;background:#1e293b;border-radius:4px;transform:translateY(-50%);
+}
+.step {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 25%;
+}
+.step .circle { width: 16px; height: 16px; border-radius: 50%; background: #1e293b; margin-bottom: 5px; }
+.step.active .circle { background: var(--accent); }
+.step.done .circle { background: var(--success); }
+.step span { font-size: 10px; text-align: center; color: #94a3b8; }
+
+/* Charts */
+canvas {
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 4px;
+  height: 140px!important;
+  width: 100%!important;
+  backdrop-filter: blur(8px);
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>Trendspy Fashion Admin</h1>
+        <div class="lead">Analytics + Payments + Receipts</div>
+      </div>
+    </div>
+    <div>
+      <button class="primary" onclick="window.location.href='import.html?auth=trendspy-admin'">👗 Manage Products</button>
+      <button class="primary" onclick="window.location.href='index.html'">🏬 Go to Store</button>
+      <button class="ghost" id="refresh">🔁 Refresh</button>
+      <button class="danger" id="clear">🧹 Clear All</button>
+      <button class="ghost" id="logout">Logout</button>
+    </div>
+  </header>
+
+  <section>
+    <h3>📦 Orders & Tracking</h3>
+    <div id="orders"></div>
+  </section>
+
+  <hr style="border:0;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;">
+
+  <section>
+    <h3>📊 Fashion Store Analytics</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <div class="card"><b>Total Orders:</b> <span id="totalOrders">0</span></div>
+      <div class="card"><b>Delivered:</b> <span id="deliveredOrders">0</span></div>
+      <div class="card"><b>Pending:</b> <span id="pendingOrders">0</span></div>
+      <div class="card"><b>Cancelled:</b> <span id="rejectedOrders">0</span></div>
+      <div class="card"><b>Revenue:</b> <span id="totalRevenue">₹0</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+      <canvas id="statusChart"></canvas>
+      <canvas id="revenueChart"></canvas>
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </section>
+
+  <footer>© 2025 Trendspy — Fashion Admin Dashboard</footer>
+</div>
+
+<script>
+const el=id=>document.getElementById(id);
+let orders=JSON.parse(localStorage.getItem('orders')||'[]');
+const trackingStages=['Pending','Accepted','Out for Delivery','Delivered'];
+
+/* Toast */
+function toast(m){
+  const t=document.createElement('div');
+  Object.assign(t.style,{position:'fixed',bottom:'16px',right:'16px',background:'rgba(0,0,0,0.85)',padding:'8px 12px',borderRadius:'8px',fontSize:'12px',zIndex:9999,color:'#fff'});
+  t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1500);
+}
+
+/* Render Orders */
+function renderOrders(){
+ const c=el('orders'); c.innerHTML='';
+ if(!orders.length) return c.innerHTML='<div style="color:#aaa">No fashion orders yet</div>';
+ orders.slice().reverse().forEach(o=>{
+  if(o.trackingStage===undefined)o.trackingStage=0;
+  const div=document.createElement('div'); div.className='card';
+  let trackingHtml='<div class="tracking-bar">';
+  trackingStages.forEach((s,i)=>{
+    let cls='step'; if(i<o.trackingStage)cls+=' done'; else if(i===o.trackingStage)cls+=' active';
+    trackingHtml+=`<div class="${cls}"><div class="circle"></div><span>${s}</span></div>`;
+  });
+  trackingHtml+='</div>';
+  const receiptButton=o.status==='Delivered'?`<button class="primary" style="padding:4px 8px" onclick="generateReceipt('${o.id}')">🧾 Receipt</button>`:'';
+  const remarkLine=o.remark?`<div class="remark">📝 ${o.remark}</div>`:'';
+  const paymentInfo=`<div style="font-size:13px;color:#cbd5e1;margin-top:4px;">
+    💰 <b>${o.paymentMethod||'N/A'}</b> — 
+    <span style="color:${o.paymentStatus==='Paid'?'#22c55e':'#fbbf24'}">${o.paymentStatus||'Unpaid'}</span>
+  </div>`;
+  div.innerHTML=`
+    <b>${o.id}</b> — ${o.ts||new Date().toLocaleString()}<br>
+    <small>${o.user}</small><br>
+    <div>Status: <span class="status ${o.status?.toLowerCase()}">${o.status}</span></div>
+    <div>Total: <b>${o.total}</b></div>
+    ${paymentInfo}
+    ${trackingHtml}${remarkLine}
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="primary" style="padding:4px 8px" onclick="nextStage('${o.id}')">Next</button>
+      <button class="ghost" style="padding:4px 8px" onclick="prevStage('${o.id}')">Prev</button>
+      <button class="danger" style="padding:4px 8px" onclick="cancelOrder('${o.id}')">Reject</button>
+      ${receiptButton}
+    </div>`;
+  c.appendChild(div);
+ });
+}
+
+/* Stage Control */
+function nextStage(id){
+ const o=orders.find(x=>x.id===id); if(!o)return;
+ if(o.trackingStage<trackingStages.length-1)o.trackingStage++;
+ o.status=trackingStages[o.trackingStage];
+ if(o.status==='Delivered')o.remark='Delivered successfully';
+ localStorage.setItem('orders',JSON.stringify(orders));
+ renderOrders();renderCharts();toast(`Moved to ${o.status}`);
+}
+function prevStage(id){
+ const o=orders.find(x=>x.id===id); if(!o)return;
+ if(o.trackingStage>0)o.trackingStage--;
+ o.status=trackingStages[o.trackingStage];
+ localStorage.setItem('orders',JSON.stringify(orders));
+ renderOrders();renderCharts();toast(`Reverted to ${o.status}`);
+}
+function cancelOrder(id){
+ const o=orders.find(x=>x.id===id); if(!o)return;
+ const reason=prompt("Reason for rejection:","Out of stock");
+ o.status='Cancelled'; o.trackingStage=0; o.remark=reason||"No remark";
+ localStorage.setItem('orders',JSON.stringify(orders));
+ renderOrders();renderCharts();toast('Order rejected.');
+}
+
+/* Receipt */
+async function generateReceipt(id){
+ const o=orders.find(x=>x.id===id);
+ if(!o)return alert('Order not found.');
+ const tmp=document.createElement('div');
+ tmp.innerHTML=`
+ <div style="font-family:sans-serif;padding:20px;width:260px;background:white;color:black">
+   <h3 style="text-align:center;color:#ec4899;">👗 Trendspy Fashion</h3>
+   <p style="text-align:center;">Customer Receipt</p><hr>
+   <b>Order ID:</b> ${o.id}<br>
+   <b>Customer:</b> ${o.user}<br>
+   <b>Status:</b> ${o.status}<br>
+   <b>Payment:</b> ${o.paymentMethod||'N/A'} (${o.paymentStatus||'Unpaid'})<br>
+   <b>Total:</b> ${o.total}<br>
+   <b>Date:</b> ${new Date().toLocaleString()}<br><br>
+   <b>Items:</b><br>${Object.values(o.items||{}).map(i=>`${i.title} × ${i.qty}`).join('<br>')}
+   <hr><small>Thank you for shopping Trendspy!</small>
+ </div>`;
+ document.body.appendChild(tmp);
+ const canvas=await html2canvas(tmp);
+ const imgData=canvas.toDataURL('image/png');
+ const pdf=new jspdf.jsPDF();
+ const pdfW=pdf.internal.pageSize.getWidth();
+ const pdfH=(canvas.height*pdfW)/canvas.width;
+ pdf.addImage(imgData,'PNG',0,0,pdfW,pdfH);
+ pdf.save(`Receipt_${o.id}.pdf`);
+ tmp.remove();
+ toast('Receipt downloaded');
+}
+
+/* Charts */
+let charts={};
+function renderCharts(){
+ const counts={Pending:0,Accepted:0,'Out for Delivery':0,Delivered:0,Cancelled:0};
+ let revenue=0; const catCount={};
+ orders.forEach(o=>{
+   counts[o.status]=(counts[o.status]||0)+1;
+   Object.values(o.items||{}).forEach(i=>{
+     catCount[i.category]=(catCount[i.category]||0)+i.qty;
+   });
+   if(o.paymentStatus==='Paid')revenue+=parseInt(o.total.replace('₹',''));
+ });
+ el('totalOrders').textContent=orders.length;
+ el('deliveredOrders').textContent=counts.Delivered;
+ el('pendingOrders').textContent=counts.Pending;
+ el('rejectedOrders').textContent=counts.Cancelled;
+ el('totalRevenue').textContent='₹'+revenue;
+ Object.values(charts).forEach(ch=>ch.destroy&&ch.destroy());
+ charts.status=new Chart(el('statusChart'),{
+  type:'doughnut',
+  data:{labels:Object.keys(counts),datasets:[{data:Object.values(counts),backgroundColor:['#fbbf24','#ec4899','#8b5cf6','#22c55e','#ef4444']}]},
+  options:{plugins:{legend:{display:false}},cutout:'70%'}
+ });
+ charts.revenue=new Chart(el('revenueChart'),{
+  type:'bar',
+  data:{labels:['Revenue'],datasets:[{data:[revenue],backgroundColor:'#22c55e'}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{display:false}}}
+ });
+ charts.category=new Chart(el('categoryChart'),{
+  type:'pie',
+  data:{labels:Object.keys(catCount),datasets:[{data:Object.values(catCount),backgroundColor:['#ec4899','#8b5cf6','#22c55e','#fbbf24','#ef4444']}]},
+  options:{plugins:{legend:{display:false}}}
+ });
+}
+
+/* Utilities */
+function refreshDashboard(){toast("Refreshing...");setTimeout(()=>location.reload(),600);}
+function cleanDashboard(){if(confirm("⚠️ Clear all orders?")){localStorage.removeItem('orders');orders=[];renderOrders();renderCharts();toast("Cleared.");}}
+
+/* Init */
+renderOrders();renderCharts();
+el('logout').onclick=()=>{localStorage.removeItem('admin');toast('Logged out');setTimeout(()=>window.location.href='index.html',700);};
+el('refresh').onclick=refreshDashboard;
+el('clear').onclick=cleanDashboard;
+</script>
+</body>
+</html>
