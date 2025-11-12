@@ -3,80 +3,177 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trendspy — Secure Product Manager</title>
+<title>Trendspy — Product Management</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
 :root{
-  --bg:#0a0f1e;--accent:#06b6d4;--accent2:#60a5fa;--muted:#94a3b8;
+  --bg:#0b0f1e;
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --muted:#94a3b8;
   --glass:rgba(255,255,255,0.05);
-  font-family:'Poppins',sans-serif;color:#e6eef8;
+  --success:#22c55e;
+  font-family:'Poppins',sans-serif;
+  color:#e6eef8;
 }
+
 body{
-  margin:0;background:radial-gradient(circle at top,#0f172a,#0a0f1f);
-  display:flex;flex-direction:column;align-items:center;padding:20px;text-align:center;
+  margin:0;
+  background:radial-gradient(circle at top,#1a1035,#0b0f1e 80%);
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;
+  padding:30px 20px;
 }
-.container{
-  background:var(--glass);border-radius:14px;padding:20px;
-  max-width:850px;width:100%;box-shadow:0 0 25px rgba(6,182,212,0.15);
+
+header{
+  display:flex;align-items:center;justify-content:center;
+  gap:10px;margin-bottom:20px;
 }
-h1{margin:6px 0;}
-button{
-  padding:8px 14px;border-radius:8px;border:0;
+.logo{
+  width:46px;height:46px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:20px;color:#0a0a0a;
+}
+h1{
+  font-size:28px;margin:0;
   background:linear-gradient(90deg,var(--accent),var(--accent2));
-  color:#031d25;font-weight:600;cursor:pointer;
-  box-shadow:0 0 10px rgba(6,182,212,0.4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  font-weight:700;
 }
-button.ghost{
-  background:transparent;border:1px solid rgba(255,255,255,0.15);
-  color:#e6eef8;box-shadow:none;
+
+.container{
+  background:rgba(255,255,255,0.05);
+  border-radius:16px;
+  padding:24px;
+  width:95%;max-width:900px;
+  box-shadow:0 0 25px rgba(236,72,153,0.15);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.08);
 }
-input,select{
-  padding:8px;border-radius:8px;margin:4px;width:100%;
-  border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;
-}
-input[type=file]{
-  border:1px dashed rgba(255,255,255,0.15);
-  color:#94a3b8;background:rgba(255,255,255,0.02);
-}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
-th,td{border-bottom:1px solid rgba(255,255,255,0.08);padding:6px;text-align:left}
-tr:hover{background:rgba(255,255,255,0.05)}
-footer{margin-top:20px;font-size:12px;color:var(--muted)}
-#denied{color:#ef4444;font-weight:600;margin-top:20px}
-form{margin-top:10px;text-align:left}
+
 fieldset{
-  border:1px solid rgba(255,255,255,0.1);
-  padding:10px;border-radius:10px;margin-top:10px;
-  background:rgba(255,255,255,0.02);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;
+  margin-top:16px;
+  background:rgba(255,255,255,0.03);
+  padding:16px;
+  transition:.3s;
 }
-legend{color:var(--accent);padding:0 6px;font-weight:600;}
+fieldset:hover{box-shadow:0 0 10px rgba(236,72,153,0.15);}
+legend{
+  color:var(--accent);
+  padding:0 8px;
+  font-weight:600;
+}
+
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  margin:5px 0 10px 0;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.07);
+  color:#fff;
+}
+input:focus{outline:none;border-color:var(--accent);}
+
+input[type=file]{
+  border:1px dashed rgba(255,255,255,0.2);
+  padding:8px;
+  color:#a0aec0;
+  background:rgba(255,255,255,0.03);
+  text-align:center;
+}
+
+button{
+  padding:10px 16px;
+  border-radius:10px;
+  border:none;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:5px;
+  transition:.3s;
+}
+button.primary{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#fff;
+  box-shadow:0 0 10px rgba(236,72,153,0.3);
+}
+button.primary:hover{filter:brightness(1.2);transform:translateY(-1px);}
+button.ghost{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.15);
+  color:#e6eef8;
+}
+button.ghost:hover{background:rgba(255,255,255,0.08);}
+
+table{
+  width:100%;border-collapse:collapse;
+  margin-top:20px;font-size:14px;
+}
+th,td{padding:10px;text-align:left;}
+th{border-bottom:1px solid rgba(255,255,255,0.1);color:var(--accent);}
+tr:hover{background:rgba(255,255,255,0.05);}
+td button{font-size:12px;padding:5px 10px;}
+
 #bulkDeleteBtn{display:none;margin-top:8px;}
+#denied{color:#ef4444;font-weight:600;margin-top:40px;text-align:center;}
+
+footer{
+  margin-top:30px;
+  color:var(--muted);
+  font-size:12px;
+  text-align:center;
+}
+
+.toast{
+  position:fixed;bottom:20px;right:20px;
+  background:rgba(0,0,0,0.85);
+  padding:10px 14px;border-radius:10px;
+  font-size:13px;
+  color:white;
+  box-shadow:0 0 15px rgba(236,72,153,0.4);
+  animation:fade 1.2s ease forwards;
+}
+@keyframes fade{
+  0%{opacity:0;transform:translateY(10px);}
+  20%{opacity:1;}
+  80%{opacity:1;}
+  100%{opacity:0;transform:translateY(10px);}
+}
 </style>
 </head>
-<body>
-<div class="container" id="main">
-  <h1>🧩 Product Management</h1>
-  <p style="color:var(--muted)">Add, import, update, or delete multiple products. Accessible only from Admin Dashboard.</p>
 
-  <!-- Add Product Form -->
+<body>
+<header>
+  <div class="logo">T</div>
+  <h1>Trendspy Product Manager</h1>
+</header>
+
+<div class="container" id="main">
+  <p style="color:var(--muted)">Manage your store inventory — Add, Import, Update or Delete Products.</p>
+
+  <!-- Add Product -->
   <fieldset>
-    <legend>Add / Edit Product</legend>
+    <legend>🪄 Add / Edit Product</legend>
     <form id="productForm">
       <input type="hidden" id="pid">
-      <label>Title:</label><input id="title" required>
-      <label>Category:</label><input id="category" placeholder="e.g. Electronics">
-      <label>Price:</label><input id="price" type="number" required>
-      <label>Discount Price:</label><input id="discountPrice" type="number">
+      <label>Title:</label><input id="title" placeholder="e.g. Classic Hoodie" required>
+      <label>Category:</label><input id="category" placeholder="e.g. Hoodies / T-Shirts">
+      <label>Price (₹):</label><input id="price" type="number" required>
+      <label>Discount Price (₹):</label><input id="discountPrice" type="number">
       <label>Image URL:</label><input id="image" placeholder="https://picsum.photos/400">
-      <button type="submit">💾 Save Product</button>
+      <button type="submit" class="primary">💾 Save Product</button>
     </form>
   </fieldset>
 
-  <!-- Import Excel -->
+  <!-- Excel Import -->
   <fieldset>
-    <legend>Import from Excel</legend>
+    <legend>📥 Import from Excel</legend>
     <input type="file" id="fileInput" accept=".xlsx,.xls">
-    <button id="importBtn">📥 Import Excel</button>
+    <button id="importBtn" class="primary">Import Excel</button>
   </fieldset>
 
   <div id="productTable"></div>
@@ -85,39 +182,53 @@ legend{color:var(--accent);padding:0 6px;font-weight:600;}
 </div>
 
 <div id="denied" style="display:none">🚫 Access Denied. Please open this page from Admin Dashboard.</div>
-
-<footer>© 2025 Trendspy | Secure Product CRUD Manager</footer>
+<footer>© 2025 Trendspy | Secure Product Manager</footer>
 
 <script>
 const el=id=>document.getElementById(id);
 const urlParams=new URLSearchParams(window.location.search);
 const authKey=urlParams.get('auth');
 
-/* === Access Control === */
+/* === ACCESS CONTROL === */
 if(authKey!=='trendspy-admin'){
   el('main').style.display='none';
   el('denied').style.display='block';
   throw new Error('Unauthorized Access');
 }
 
-/* === Data Load === */
+/* === STORAGE === */
 let products=JSON.parse(localStorage.getItem('products')||'[]');
-function save(){localStorage.setItem('products',JSON.stringify(products));}
-function toast(m){const t=document.createElement('div');Object.assign(t.style,{position:'fixed',bottom:'18px',right:'18px',background:'rgba(0,0,0,0.8)',padding:'8px 12px',borderRadius:'8px',fontSize:'12px',zIndex:9999});t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1200);}
+function save(){
+  localStorage.setItem('products',JSON.stringify(products));
+  window.dispatchEvent(new StorageEvent('storage',{key:'products',newValue:JSON.stringify(products)}));
+}
 
-/* === Render Table === */
+/* === TOAST === */
+function toast(msg){
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),1800);
+}
+
+/* === RENDER TABLE === */
 function renderTable(){
   const c=el('productTable');
-  if(!products.length){c.innerHTML='<div style="margin-top:12px;color:#94a3b8;">No products available</div>';el('bulkDeleteBtn').style.display='none';return;}
+  if(!products.length){
+    c.innerHTML='<p style="color:var(--muted)">No products available yet.</p>';
+    el('bulkDeleteBtn').style.display='none';
+    return;
+  }
   c.innerHTML=`<table>
-    <thead><tr><th><input type="checkbox" id="selectAll"></th><th>Title</th><th>Category</th><th>Price</th><th>Discount</th><th>Action</th></tr></thead>
+    <thead><tr><th><input type="checkbox" id="selectAll"></th><th>Image</th><th>Title</th><th>Category</th><th>Price</th><th>Discount</th><th>Actions</th></tr></thead>
     <tbody>${products.map(p=>`
       <tr>
         <td><input type="checkbox" class="select" data-id="${p.id}"></td>
+        <td><img src="${p.image}" width="50" height="50" style="border-radius:6px"></td>
         <td>${p.title}</td>
         <td>${p.category}</td>
-        <td>₹${p.price}</td>
-        <td>${p.discountPrice||'-'}</td>
+        <td style="color:var(--success)">₹${p.price}</td>
+        <td>${p.discountPrice?`₹${p.discountPrice}`:'—'}</td>
         <td>
           <button class='ghost' onclick="editProduct(${p.id})">✏ Edit</button>
           <button class='ghost' onclick="deleteProduct(${p.id})">🗑 Delete</button>
@@ -130,7 +241,7 @@ function renderTable(){
   };
 }
 
-/* === Add / Edit Product === */
+/* === ADD/EDIT PRODUCT === */
 el('productForm').onsubmit=e=>{
   e.preventDefault();
   const pid=el('pid').value;
@@ -138,22 +249,17 @@ el('productForm').onsubmit=e=>{
     id:pid?parseInt(pid):Date.now(),
     title:el('title').value.trim(),
     category:el('category').value.trim()||'General',
-    price:parseInt(el('price').value),
+    price:parseInt(el('price').value)||0,
     discountPrice:parseInt(el('discountPrice').value)||0,
     image:el('image').value.trim()||'https://picsum.photos/400'
   };
   if(pid){
     const idx=products.findIndex(p=>p.id==pid);
-    products[idx]=newProduct;
-    toast('✅ Product updated');
-  } else {
-    products.push(newProduct);
-    toast('✅ Product added');
-  }
-  el('productForm').reset();
-  el('pid').value='';
-  save();renderTable();
+    products[idx]=newProduct; toast('✅ Product updated');
+  }else{products.push(newProduct); toast('✅ Product added');}
+  el('productForm').reset(); el('pid').value=''; save(); renderTable();
 };
+
 function editProduct(id){
   const p=products.find(x=>x.id===id);
   if(!p)return;
@@ -165,27 +271,28 @@ function editProduct(id){
   el('image').value=p.image;
   toast('✏ Edit mode active');
 }
+
 function deleteProduct(id){
   if(!confirm('Delete this product?'))return;
   products=products.filter(p=>p.id!==id);
-  save();renderTable();toast('🗑 Product deleted');
+  save(); renderTable(); toast('🗑 Product deleted');
 }
 
-/* === Delete Multiple === */
+/* === BULK DELETE === */
 el('bulkDeleteBtn').onclick=()=>{
   const selected=[...document.querySelectorAll('.select:checked')].map(cb=>+cb.dataset.id);
   if(!selected.length)return toast('No products selected');
   if(!confirm('Delete selected products?'))return;
   products=products.filter(p=>!selected.includes(p.id));
-  save();renderTable();toast('🗑 Multiple products deleted');
+  save(); renderTable(); toast('🗑 Selected products deleted');
 };
 
-/* === Excel Import === */
+/* === IMPORT FROM EXCEL === */
 el('importBtn').onclick=()=>{
   const file=el('fileInput').files[0];
-  if(!file)return alert('Select an Excel file first.');
+  if(!file)return alert('Please select an Excel file first!');
   const reader=new FileReader();
-  reader.onload=(e)=>{
+  reader.onload=e=>{
     const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
     const sheet=wb.Sheets[wb.SheetNames[0]];
     const json=XLSX.utils.sheet_to_json(sheet);
@@ -194,16 +301,16 @@ el('importBtn').onclick=()=>{
       title:p.Title||p.name||p.Product||`Item ${i+1}`,
       price:parseInt(p.Price)||0,
       discountPrice:parseInt(p.DiscountPrice)||0,
-      category:p.Category||'general',
-      image:p.Image||'https://picsum.photos/400?random='+(i+1)
+      category:p.Category||'General',
+      image:p.Image||`https://picsum.photos/400?random=${i+1}`
     }));
     products=[...products,...imported];
-    save();renderTable();toast('📥 Products imported successfully!');
+    save(); renderTable(); toast('📥 Imported successfully!');
   };
   reader.readAsArrayBuffer(file);
 };
 
-/* === Init === */
+/* === INIT === */
 renderTable();
 window.addEventListener('storage',()=>location.reload());
 </script>

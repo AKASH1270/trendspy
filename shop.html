@@ -24,7 +24,6 @@
   color: #e6eef8;
 }
 
-/* Body */
 body {
   margin: 0;
   background: radial-gradient(circle at top, #1a1035 0%, #0a0f1f 100%);
@@ -32,7 +31,6 @@ body {
 }
 .wrap { max-width: 1200px; margin: 20px auto; padding: 20px; }
 
-/* Header */
 header.top {
   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
   gap: 10px; background: rgba(0,0,0,0.5);
@@ -51,13 +49,11 @@ header.top {
 h1 {
   font-size: 22px; margin: 0;
   background: linear-gradient(90deg,var(--accent),var(--accent2));
-  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 .lead { font-size: 12px; color: var(--muted); }
 
-/* Buttons */
 button {
   padding: 7px 12px;
   border-radius: 8px;
@@ -84,7 +80,6 @@ button.ghost {
   color: var(--muted);
 }
 
-/* Cards */
 .card {
   background: var(--glass);
   padding: 14px;
@@ -96,7 +91,6 @@ button.ghost {
 }
 .card:hover { box-shadow: 0 0 10px rgba(236,72,153,0.3); }
 
-/* Status Colors */
 .status { font-weight: 700; text-transform: capitalize; }
 .status.pending { color: var(--warn); }
 .status.accepted { color: var(--accent2); }
@@ -105,7 +99,6 @@ button.ghost {
 .status.paid { color: var(--success); }
 .remark { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-/* Tracking Bar */
 .tracking-bar {
   display: flex; justify-content: space-between; position: relative; margin-top: 10px;
 }
@@ -120,7 +113,6 @@ button.ghost {
 .step.done .circle { background: var(--success); }
 .step span { font-size: 10px; text-align: center; color: #94a3b8; }
 
-/* Charts */
 canvas {
   background: rgba(255,255,255,0.04);
   border-radius: 10px;
@@ -130,7 +122,6 @@ canvas {
   backdrop-filter: blur(8px);
 }
 
-/* Footer */
 footer {
   text-align: center;
   color: var(--muted);
@@ -293,19 +284,23 @@ async function generateReceipt(id){
 let charts={};
 function renderCharts(){
  const counts={Pending:0,Accepted:0,'Out for Delivery':0,Delivered:0,Cancelled:0};
- let revenue=0; const catCount={};
+ let paidRevenue=0, codRevenue=0, totalRevenue=0; const catCount={};
  orders.forEach(o=>{
    counts[o.status]=(counts[o.status]||0)+1;
+   const clean=parseInt((o.total||'0').replace(/[₹,]/g,''))||0;
+   if(o.paymentStatus==='Paid')paidRevenue+=clean;
+   if(o.paymentMethod==='Cash on Delivery')codRevenue+=clean;
+   totalRevenue+=clean;
    Object.values(o.items||{}).forEach(i=>{
      catCount[i.category]=(catCount[i.category]||0)+i.qty;
    });
-   if(o.paymentStatus==='Paid')revenue+=parseInt(o.total.replace('₹',''));
  });
  el('totalOrders').textContent=orders.length;
- el('deliveredOrders').textContent=counts.Delivered;
- el('pendingOrders').textContent=counts.Pending;
- el('rejectedOrders').textContent=counts.Cancelled;
- el('totalRevenue').textContent='₹'+revenue;
+ el('deliveredOrders').textContent=counts.Delivered||0;
+ el('pendingOrders').textContent=counts.Pending||0;
+ el('rejectedOrders').textContent=counts.Cancelled||0;
+ el('totalRevenue').textContent='₹'+totalRevenue.toLocaleString();
+
  Object.values(charts).forEach(ch=>ch.destroy&&ch.destroy());
  charts.status=new Chart(el('statusChart'),{
   type:'doughnut',
@@ -314,8 +309,8 @@ function renderCharts(){
  });
  charts.revenue=new Chart(el('revenueChart'),{
   type:'bar',
-  data:{labels:['Revenue'],datasets:[{data:[revenue],backgroundColor:'#22c55e'}]},
-  options:{plugins:{legend:{display:false}},scales:{y:{display:false}}}
+  data:{labels:['Paid','COD'],datasets:[{data:[paidRevenue,codRevenue],backgroundColor:['#22c55e','#fbbf24']}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{color:'#94a3b8'}}}}
  });
  charts.category=new Chart(el('categoryChart'),{
   type:'pie',
@@ -328,7 +323,6 @@ function renderCharts(){
 function refreshDashboard(){toast("Refreshing...");setTimeout(()=>location.reload(),600);}
 function cleanDashboard(){if(confirm("⚠️ Clear all orders?")){localStorage.removeItem('orders');orders=[];renderOrders();renderCharts();toast("Cleared.");}}
 
-/* Init */
 renderOrders();renderCharts();
 el('logout').onclick=()=>{localStorage.removeItem('admin');toast('Logged out');setTimeout(()=>window.location.href='index.html',700);};
 el('refresh').onclick=refreshDashboard;
