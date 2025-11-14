@@ -35,7 +35,8 @@ const closeModal = document.getElementById("closeModal");
 
 let deliveryAddress = "";
 const currentOrder = JSON.parse(localStorage.getItem("currentOrder") || "null");
-const user = JSON.parse(localStorage.getItem("user") || "null");
+const user = JSON.parse(localStorage.getItem("trendspy_user") || "null");
+
 
 /* Load Order Summary */
 if (!currentOrder) {
