@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trendspy — Customers Directory</title>
+
+<!-- Chart.js (optional for analytics) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+:root {
+  --bg:#0c1022;
+  --panel:rgba(255,255,255,0.05);
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --success:#22c55e;
+  --danger:#ef4444;
+  --warn:#facc15;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --card:rgba(255,255,255,0.06);
+  font-family:'Poppins',sans-serif;
+}
+
+/* LIGHT MODE */
+body.light {
+  --bg:#f8fafc;
+  --panel:#ffffff;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#4b5563;
+  background:linear-gradient(#f3f4f6,#e5e7eb);
+}
+
+/* BASE */
+body {
+  margin:0;
+  background:linear-gradient(180deg,#0c1022,#090c1a);
+  color:var(--text);
+  transition:.4s;
+}
+.container{
+  max-width:1250px;
+  margin:25px auto;
+  padding:0 20px;
+}
+
+/* HEADER */
+header {
+  background:var(--panel);
+  padding:16px 22px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 0 20px rgba(236,72,153,0.15);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+}
+.logo{
+  font-size:24px;
+  font-weight:700;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* INPUTS */
+input, select {
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:var(--panel);
+  color:var(--text);
+  font-size:14px;
+}
+body.light input { background:#fff; border:1px solid #ccc; }
+
+/* BUTTONS */
+button {
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+.primary{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#fff;
+}
+.ghost {
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.2);
+  color:var(--muted);
+}
+.danger { background:#ef4444;color:#fff; }
+
+/* CUSTOMER GRID */
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:16px;
+  margin-top:25px;
+}
+.card {
+  background:var(--panel);
+  padding:16px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  transition:.25s;
+  cursor:pointer;
+}
+.card:hover { transform:translateY(-5px);box-shadow:0 0 20px rgba(236,72,153,0.2); }
+
+/* PROFILE PANEL */
+#profilePanel {
+  position:fixed;
+  top:0;right:-420px;
+  width:400px;
+  height:100%;
+  background:var(--panel);
+  backdrop-filter:blur(10px);
+  padding:20px;
+  border-left:1px solid rgba(255,255,255,0.1);
+  box-shadow:-5px 0 15px rgba(0,0,0,0.4);
+  transition:.4s;
+  overflow:auto;
+  z-index:999;
+}
+#profilePanel.open { right:0; }
+
+/* CLOSE BTN */
+.closeBtn{
+  background:#ef4444;
+  color:#fff;
+  padding:8px 12px;
+  border-radius:8px;
+  float:right;
+}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  #profilePanel{
+    width:100%;
+  }
+  header{
+    flex-direction:column;
+    gap:15px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+  <div class="logo">Trendspy Customers</div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <input id="searchBox" placeholder="🔍 Search customer name, phone">
+    <select id="sortSelect">
+      <option value="name">Sort by Name</option>
+      <option value="orders">Sort by Total Orders</option>
+      <option value="spent">Sort by Amount Spent</option>
+    </select>
+    <button class="primary" id="exportCSV">⬇ Export CSV</button>
+
+    <label style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" id="themeSwitch">
+      <span style="color:var(--muted)">Light Mode</span>
+    </label>
+
+  </div>
+</header>
+
+<h2 style="margin-top:25px;">Customer Directory</h2>
+
+<div id="customerGrid" class="grid"></div>
+
+</div>
+
+<!-- PROFILE PANEL (Slide-in) -->
+<div id="profilePanel">
+  <button class="closeBtn" onclick="closeProfile()">Close</button>
+  <h2 id="pName"></h2>
+  <p><b>Phone:</b> <span id="pPhone"></span></p>
+  <p><b>Total Orders:</b> <span id="pOrders"></span></p>
+  <p><b>Total Spent:</b> ₹<span id="pSpent"></span></p>
+
+  <h3 style="margin-top:20px">Order History</h3>
+  <div id="pHistory"></div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, get, onValue } 
+from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+ apiKey:"YOUR_API_KEY",
+ authDomain:"trendspy-3ba6d.firebaseapp.com",
+ databaseURL:"https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+ projectId:"trendspy-3ba6d",
+ storageBucket:"trendspy-3ba6d.appspot.com",
+ messagingSenderId:"1064401414241",
+ appId:"YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* DOM */
+const grid = document.getElementById("customerGrid");
+
+/* THEME */
+if(localStorage.getItem("cust_theme")==="light"){
+  document.body.classList.add("light");
+  document.getElementById("themeSwitch").checked = true;
+}
+document.getElementById("themeSwitch").onchange = e=>{
+  document.body.classList.toggle("light", e.target.checked);
+  localStorage.setItem("cust_theme", e.target.checked? "light":"dark");
+};
+
+/* LOAD CUSTOMERS */
+let customers=[];
+
+onValue(ref(db,"orders"),snap=>{
+  customers=[];
+  snap.forEach(user=>{
+    
+    let contact = user.key;
+    let ordersArr = Object.values(user.val());
+
+    let totalSpent = 0;
+    ordersArr.forEach(o=>{
+      totalSpent += parseInt((o.total||"0").replace(/[₹,]/g,"")) || 0;
+    });
+
+    customers.push({
+      phone:contact,
+      name:ordersArr[0].user,
+      orders:ordersArr.length,
+      spent:totalSpent,
+      history:ordersArr
+    });
+  });
+
+  renderCustomers(customers);
+});
+
+/* RENDER */
+function renderCustomers(list){
+  grid.innerHTML="";
+  list.forEach(c=>{
+    let div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`
+      <h3>${c.name}</h3>
+      <p style="color:var(--muted)">${c.phone}</p>
+      <p><b>Orders:</b> ${c.orders}</p>
+      <p><b>Spent:</b> ₹${c.spent}</p>
+    `;
+    div.onclick=()=>openProfile(c);
+    grid.appendChild(div);
+  });
+}
+
+/* SEARCH */
+document.getElementById("searchBox").oninput = e=>{
+  let q=e.target.value.toLowerCase();
+  let f=customers.filter(c=>
+    c.name.toLowerCase().includes(q) ||
+    c.phone.toLowerCase().includes(q)
+  );
+  renderCustomers(f);
+};
+
+/* SORTING */
+document.getElementById("sortSelect").onchange = e=>{
+  let v=e.target.value;
+  let list=[...customers];
+  if(v==="name") list.sort((a,b)=>a.name.localeCompare(b.name));
+  if(v==="orders") list.sort((a,b)=>b.orders - a.orders);
+  if(v==="spent") list.sort((a,b)=>b.spent - a.spent);
+  renderCustomers(list);
+};
+
+/* PROFILE PANEL */
+function openProfile(c){
+  document.getElementById("pName").textContent=c.name;
+  document.getElementById("pPhone").textContent=c.phone;
+  document.getElementById("pOrders").textContent=c.orders;
+  document.getElementById("pSpent").textContent=c.spent;
+
+  let html="";
+  c.history.forEach(h=>{
+    html += `
+      <div style="padding:10px;border-bottom:1px solid rgba(255,255,255,0.08)">
+        <b>${h.id}</b><br>
+        <small>${h.ts}</small><br>
+        Status: <b>${h.status}</b><br>
+        Total: <b>${h.total}</b>
+      </div>
+    `;
+  });
+
+  document.getElementById("pHistory").innerHTML=html;
+  
+  document.getElementById("profilePanel").classList.add("open");
+}
+window.closeProfile = ()=> document.getElementById("profilePanel").classList.remove("open");
+
+/* EXPORT CSV */
+document.getElementById("exportCSV").onclick = ()=>{
+  let csv="Name,Phone,Total Orders,Amount Spent\n";
+  customers.forEach(c=>{
+    csv+=`${c.name},${c.phone},${c.orders},${c.spent}\n`;
+  });
+
+  let blob=new Blob([csv],{type:"text/csv"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="trendspy_customers.csv";
+  a.click();
+};
+
+</script>
+
+</body>
+</html>

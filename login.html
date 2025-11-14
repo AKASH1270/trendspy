@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trendspy — Admin Login</title>
+
+<style>
+:root{
+  --bg:#0b0f1e;
+  --card:rgba(255,255,255,0.08);
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --danger:#ef4444;
+  --text:#f5f5f5;
+  --muted:#94a3b8;
+  font-family:'Poppins',sans-serif;
+}
+
+/* Light Mode */
+body.light{
+  --bg:#f8fafc;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#4b5563;
+  background:#f8fafc;
+}
+
+/* Layout */
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#1a1035,#0b0f1e 85%);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  padding:20px;
+  transition:.4s;
+}
+
+/* Card */
+.login-box{
+  width:95%;
+  max-width:420px;
+  padding:32px;
+  border-radius:22px;
+  background:var(--card);
+  box-shadow:0 0 35px rgba(236,72,153,0.25);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.06);
+  text-align:center;
+  animation:fadeIn .8s ease;
+}
+
+/* Logo */
+.logo{
+  font-size:32px;
+  font-weight:900;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* Subtitle */
+.subtitle{
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+/* Title */
+h2{
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+}
+
+/* Inputs */
+.input-field{
+  width:100%;
+  margin-top:16px;
+}
+.input-field input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.07);
+  color:var(--text);
+  font-size:16px;
+}
+body.light .input-field input{
+  background:#f1f5f9;
+  border:1px solid #cbd5e1;
+}
+.input-field input:focus{
+  outline:none;
+  border-color:var(--accent);
+}
+
+/* Buttons */
+button{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  margin-top:20px;
+  font-size:17px;
+  font-weight:700;
+  cursor:pointer;
+}
+.primary-btn{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:white;
+}
+.primary-btn:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.1);
+}
+
+/* Error */
+.error{
+  margin-top:14px;
+  color:var(--danger);
+  font-weight:600;
+  display:none;
+}
+
+/* Theme Toggle */
+.toggle-container{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:10px;
+}
+
+.theme-toggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:600;
+  color:var(--text);
+}
+
+.theme-toggle input{display:none}
+
+.slider{
+  width:40px;
+  height:20px;
+  background:#888;
+  border-radius:20px;
+  position:relative;
+  transition:.3s;
+}
+.slider::before{
+  content:"";
+  width:16px;
+  height:16px;
+  background:white;
+  position:absolute;
+  top:2px;
+  left:2px;
+  border-radius:50%;
+  transition:.3s;
+}
+input:checked + .slider{
+  background:var(--accent);
+}
+input:checked + .slider::before{
+  transform:translateX(20px);
+}
+
+/* Animation */
+@keyframes fadeIn{
+  from{opacity:0; transform:scale(.95)}
+  to{opacity:1; transform:scale(1)}
+}
+
+/* Responsive */
+@media (max-width:480px){
+  .login-box{padding:24px}
+  .logo{font-size:28px}
+  button{font-size:16px;padding:12px}
+}
+@media (max-width:350px){
+  h2{font-size:18px}
+  .logo{font-size:24px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+  <!-- THEME TOGGLE -->
+  <div class="toggle-container">
+    <label class="theme-toggle">
+      <input id="themeSwitch" type="checkbox">
+      <div class="slider"></div>
+      <span id="themeLabel">Dark</span>
+    </label>
+  </div>
+
+  <div class="logo">Trendspy</div>
+  <div class="subtitle">Admin Access Panel</div>
+
+  <h2>🔐 Admin Login</h2>
+
+  <div class="input-field">
+    <input id="adminUser" type="text" placeholder="Username (admin)">
+  </div>
+
+  <div class="input-field">
+    <input id="adminPass" type="password" placeholder="Password">
+  </div>
+
+  <button id="adminLoginBtn" class="primary-btn">Login</button>
+
+  <div id="errorBox" class="error"></div>
+
+</div>
+
+<script>
+// THEME LOAD
+if(localStorage.getItem("admin_theme") === "light"){
+  document.body.classList.add("light");
+  document.getElementById("themeSwitch").checked = true;
+  document.getElementById("themeLabel").textContent = "Light";
+}
+
+// THEME TOGGLE
+document.getElementById("themeSwitch").addEventListener("change",()=>{
+  const isLight = document.getElementById("themeSwitch").checked;
+  document.body.classList.toggle("light", isLight);
+  localStorage.setItem("admin_theme", isLight ? "light" : "dark");
+  document.getElementById("themeLabel").textContent = isLight ? "Light" : "Dark";
+});
+
+// LOGIN LOGIC
+document.getElementById("adminLoginBtn").onclick = ()=>{
+  const u = document.getElementById("adminUser").value.trim();
+  const p = document.getElementById("adminPass").value.trim();
+  const error = document.getElementById("errorBox");
+
+  if(u === "admin" && p === "trendspy123"){
+    error.style.display = "none";
+    window.location.href = "shop.html";
+  } else {
+    error.style.display = "block";
+    error.textContent = "❌ Incorrect username or password!";
+  }
+};
+</script>
+
+</body>
+</html>

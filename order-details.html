@@ -1,0 +1,348 @@
+<!doctype html> 
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trendspy — Order Details</title>
+
+<style>
+/* ROOT */
+:root{
+  --bg:#0b0f1e;
+  --glass:rgba(255,255,255,0.08);
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.15);
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --text:#ffffff;
+  --muted:#9aa1b5;
+  --danger:#ef4444;
+  --success:#22c55e;
+  --warning:#facc15;
+  font-family:'Poppins',sans-serif;
+}
+
+body.light{
+  --bg:#f8fafc;
+  --glass:rgba(255,255,255,0.9);
+  --card:#ffffff;
+  --border:rgba(0,0,0,0.12);
+  --text:#111827;
+  --muted:#4b5563;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  transition:.3s;
+}
+
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:1500;
+  background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(12px);
+  padding:12px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 4px 20px rgba(0,0,0,0.35);
+}
+body.light header{ background:rgba(255,255,255,0.85); }
+
+.logo{
+  font-size:26px;font-weight:700;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+
+/* PAGE HEADING */
+.page-heading{
+  margin-top:30px;
+  text-align:center;
+  font-size:28px;
+  font-weight:700;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+
+/* SLIDER */
+.slider{
+  display:flex;overflow-x:auto;gap:20px;
+  scroll-snap-type:x mandatory;padding:20px;
+}
+.slider img{
+  width:92%;max-width:380px;border-radius:18px;
+  scroll-snap-align:center;object-fit:cover;
+  box-shadow:0 0 18px rgba(0,0,0,0.35);
+}
+
+/* CARD */
+.card{
+  background:var(--glass);backdrop-filter:blur(12px);
+  border:1px solid var(--border);
+  padding:20px;margin:20px auto;
+  border-radius:18px;width:92%;max-width:900px;
+  box-shadow:0 0 25px rgba(0,0,0,0.25);
+}
+
+.title{
+  font-size:20px;font-weight:600;margin-bottom:8px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+
+.status{
+  font-weight:700;font-size:16px;
+}
+.status.pending{color:#fbbf24;}
+.status.accepted{color:#3b82f6;}
+.status.outfordelivery{color:#8b5cf6;}
+.status.delivered{color:#22c55e;}
+.status.cancelled{color:#ef4444;}
+
+/* TIMELINE */
+.timeline{
+  display:flex;justify-content:space-between;margin-top:20px;position:relative;
+}
+.timeline::before{
+  content:"";position:absolute;top:50%;left:5%;width:90%;height:4px;
+  background:rgba(255,255,255,0.12);border-radius:4px;
+}
+body.light .timeline::before{background:#ddd;}
+.step{text-align:center;width:25%;z-index:2;}
+.dot{
+  width:20px;height:20px;border-radius:50%;background:var(--muted);
+  margin:auto;margin-bottom:6px;
+}
+.step.done .dot{background:var(--success);}
+.step.active .dot{background:var(--accent);}
+
+/* BUTTONS */
+button.primary{
+  width:100%;padding:14px;margin-top:22px;
+  border:none;border-radius:12px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:white;font-weight:700;font-size:15px;
+  cursor:pointer;
+}
+button.danger{
+  width:100%;padding:14px;margin-top:15px;
+  border:none;border-radius:12px;
+  background:linear-gradient(90deg,#ef4444,#dc2626);
+  color:white;font-weight:700;font-size:15px;
+}
+
+/* BACK */
+.back-btn{
+  position:fixed;top:18px;left:18px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:white;cursor:pointer;z-index:2000;
+}
+</style>
+</head>
+
+<body>
+
+<div class="back-btn" onclick="history.back()">←</div>
+
+<header>
+  <div class="logo">Trendspy</div>
+
+  <div class="theme-toggle">
+    <label>
+      <input type="checkbox" id="themeSwitch">
+      <div class="toggle-slider"></div>
+    </label>
+  </div>
+</header>
+
+<h2 class="page-heading">Order Details</h2>
+
+<div id="slider" class="slider"></div>
+
+<div id="orderInfo" class="card">Loading...</div>
+
+<script type="module">
+import { initializeApp } from 
+"https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+
+import { getDatabase, ref, get, update } 
+from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+/* Firebase */
+const firebaseConfig = {
+  apiKey:"YOUR_API_KEY",
+  authDomain:"trendspy-3ba6d.firebaseapp.com",
+  databaseURL:"https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"trendspy-3ba6d",
+  storageBucket:"trendspy-3ba6d.appspot.com",
+  messagingSenderId:"1064401414241",
+  appId:"YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* THEME */
+if(localStorage.getItem("theme")==="light"){
+  document.body.classList.add("light");
+  document.getElementById("themeSwitch").checked = true;
+}
+document.getElementById("themeSwitch").onchange = e=>{
+  document.body.classList.toggle("light", e.target.checked);
+  localStorage.setItem("theme", e.target.checked ? "light" : "dark");
+};
+
+/* URL PARAMS */
+const params = new URLSearchParams(location.search);
+const orderId = params.get("id");
+const contact = params.get("contact");
+
+async function loadOrder(){
+  const snap = await get(ref(db, `orders/${contact}/${orderId}`));
+
+  if(!snap.exists()){
+    orderInfo.innerHTML = "<p>Order not found.</p>";
+    return;
+  }
+
+  const o = snap.val();
+
+/* ========== IMAGE SLIDER ========== */
+slider.innerHTML = 
+  Object.values(o.items).map(i => `<img src="${i.image}">`).join("");
+
+/* ========== TIMELINE ========== */
+const stages = ["Pending","Accepted","Out for Delivery","Delivered"];
+let timelineHTML = `<div class="timeline">`;
+stages.forEach((s,i)=>{
+  let cls = "step";
+  if(i < o.trackingStage) cls+=" done";
+  else if(i===o.trackingStage) cls+=" active";
+
+  timelineHTML += `
+    <div class="${cls}">
+      <div class="dot"></div>
+      <small>${s}</small>
+    </div>
+  `;
+});
+timelineHTML += `</div>`;
+
+/* ITEMS */
+let itemsHTML = Object.values(o.items).map(i => 
+  `${i.title} × ${i.qty}`
+).join("<br>");
+
+/* CANCEL BUTTON */
+let cancelBtn = "";
+if(o.status==="Pending" || o.status==="Accepted"){
+  cancelBtn = `
+    <button class="danger" onclick="cancelOrder()">
+      Cancel Order
+    </button>
+  `;
+}
+
+/* RECEIPT BUTTON */
+let receiptBtn = "";
+if(o.status==="Delivered"){
+  receiptBtn = `
+    <button class="primary" onclick="downloadReceipt()">
+      Download Receipt
+    </button>
+  `;
+}
+
+/* REMARK (STORE or CUSTOMER) */
+let remarkHTML = "";
+if(o.remark){
+  remarkHTML = `
+    <p style="color:#f87171;font-weight:600">
+      📝 Remark: ${o.remark}
+    </p>
+  `;
+}
+
+orderInfo.innerHTML = `
+  <div class="title">Order Info</div>
+  <b>Order ID:</b> ${o.id}<br>
+  <b>Date:</b> ${o.ts}<br>
+  <b>Status:</b> <span class="status ${o.status.replaceAll(" ","").toLowerCase()}">${o.status}</span>
+
+  ${remarkHTML}
+
+  <br>
+  <div class="title">Delivery Address</div>
+  <p style="color:var(--muted)">${o.deliveryAddress || "No address provided"}</p>
+
+  <div class="title">Items</div>
+  ${itemsHTML}
+
+  <div class="title" style="margin-top:20px;">Tracking</div>
+  ${timelineHTML}
+
+  <div class="title" style="margin-top:20px;">Payment Summary</div>
+  <p><b>Total:</b> ${o.total}</p>
+
+  ${receiptBtn}
+  ${cancelBtn}
+
+  <button class="primary" onclick="history.back()">Back</button>
+`;
+
+/* CANCEL ORDER */
+window.cancelOrder = async()=>{
+  if(!confirm("Cancel this order?")) return;
+
+  const reason = prompt("Reason for cancellation:", "Cancelled by Customer");
+
+  await update(ref(db, `orders/${contact}/${orderId}`), {
+    status:"Cancelled",
+    trackingStage:0,
+    remark:reason
+  });
+
+  location.reload();
+};
+
+/* RECEIPT DOWNLOAD */
+window.downloadReceipt = async()=>{
+  const snap2 = await get(ref(db, `orders/${contact}/${orderId}`));
+  if(!snap2.exists()) return;
+  const o2 = snap2.val();
+
+  let temp = document.createElement('div');
+  temp.innerHTML = `
+    <div style="font-family:sans-serif;padding:20px;width:260px;background:white;color:black">
+      <h3 style="text-align:center;color:#ec4899;">Trendspy Receipt</h3>
+      <hr>
+      <b>Order ID:</b> ${o2.id}<br>
+      <b>Name:</b> ${o2.user}<br>
+      <b>Total:</b> ${o2.total}<br>
+      <b>Date:</b> ${o2.ts}<br>
+      <hr>
+      <b>Items:</b><br>
+      ${Object.values(o2.items).map(i=>`${i.title} × ${i.qty}`).join("<br>")}
+      <hr>
+      <small>Thank you for shopping with Trendspy!</small>
+    </div>
+  `;
+  document.body.appendChild(temp);
+
+  const canvas = await html2canvas(temp);
+  const pdf = new jspdf.jsPDF();
+  pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 0);
+  pdf.save(`Receipt_${o2.id}.pdf`);
+  temp.remove();
+};
+
+}
+
+loadOrder();
+</script>
+
+</body>
+</html>

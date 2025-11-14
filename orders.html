@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trendspy — Enterprise Orders Dashboard</title>
+
+<!-- Chart Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+  --bg:#0b0f1e;
+  --panel:rgba(255,255,255,0.05);
+  --card:rgba(255,255,255,0.06);
+  --glass:rgba(255,255,255,0.04);
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --success:#22c55e;
+  --warn:#fca311;
+  --danger:#ef4444;
+  --text:#f5f5f5;
+  --muted:#94a3b8;
+  font-family:'Poppins',sans-serif;
+}
+
+/* Light Mode */
+body.light{
+  --bg:#f3f4f6;
+  --panel:#ffffff;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#4b5563;
+  background:linear-gradient(#fafafa,#e5e7eb);
+}
+
+/* Default */
+body{
+  margin:0;
+  background:radial-gradient(circle at top,#1a1035,#0b0f1e 80%);
+  color:var(--text);
+  transition:.4s;
+}
+
+.container{
+  max-width:1300px;
+  margin:28px auto;
+  padding:0 20px;
+}
+
+/* Header */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 24px;
+  background:var(--panel);
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 0 20px rgba(236,72,153,0.15);
+}
+.logo{
+  font-size:28px;
+  font-weight:800;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+input, select{
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:var(--card);
+  color:var(--text);
+}
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:10px;
+  font-weight:700;
+}
+.primary{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#fff;
+}
+.ghost{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.15);
+  color:var(--muted);
+}
+
+/* Orders Grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:16px;
+  margin-top:25px;
+}
+.card{
+  background:var(--card);
+  padding:18px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  transition:.25s;
+  cursor:pointer;
+}
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 0 20px rgba(236,72,153,0.25);
+}
+
+/* Status Tags */
+.tag{
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:700;
+  display:inline-block;
+}
+.tag.pending{ background:#facc15; color:#000; }
+.tag.accepted{ background:#3b82f6; }
+.tag.delivery{ background:#a855f7; }
+.tag.delivered{ background:#22c55e; }
+.tag.cancelled{ background:#ef4444; }
+
+/* Special Flags */
+.flag{
+  font-size:12px;
+  padding:3px 6px;
+  border-radius:6px;
+  display:inline-block;
+  margin-right:5px;
+}
+.flag.delay{ background:#f97316; }
+.flag.damage{ background:#dc2626; }
+.flag.return{ background:#0284c7; }
+
+/* Side Panel */
+#detailsPanel{
+  position:fixed;
+  top:0;
+  right:-420px;
+  width:400px;
+  height:100%;
+  background:var(--panel);
+  backdrop-filter:blur(10px);
+  padding:20px;
+  border-left:1px solid rgba(255,255,255,0.1);
+  box-shadow:-4px 0 14px rgba(0,0,0,0.4);
+  transition:.35s;
+  overflow:auto;
+  z-index:999;
+}
+#detailsPanel.open{ right:0 }
+
+/* Responsive */
+@media(max-width:750px){
+  #detailsPanel{ width:100%; }
+  header{ flex-direction:column; gap:12px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+  <div class="logo">Trendspy Orders</div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <input id="searchBox" placeholder="🔍 Search orders or customers">
+
+    <select id="filterStatus">
+      <option value="all">All</option>
+      <option value="Pending">Pending</option>
+      <option value="Accepted">Accepted</option>
+      <option value="Out for Delivery">Out for Delivery</option>
+      <option value="Delivered">Delivered</option>
+      <option value="Cancelled">Cancelled</option>
+      <option value="Damaged">Damaged</option>
+      <option value="Return Requested">Return Requested</option>
+    </select>
+
+    <label style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" id="themeSwitch"> Light
+    </label>
+    
+    <button class="primary" id="exportCSV">⬇ Export CSV</button>
+  </div>
+</header>
+
+<h2 style="margin-top:25px">Enterprise Orders Overview</h2>
+
+<div id="ordersGrid" class="grid"></div>
+<!-- DETAILS SIDE PANEL -->
+<aside id="detailsPanel" aria-hidden="true">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <div style="font-weight:800;font-size:18px">Order Details</div>
+      <small id="detailId" style="color:var(--muted)"></small>
+    </div>
+    <button class="ghost" id="closeDetails">Close</button>
+  </div>
+
+  <div id="detailBody" style="margin-top:14px">
+    <!-- Filled dynamically -->
+  </div>
+</aside>
+
+<!-- SCRIPTS: Firebase sync + rendering + SLA logic -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+/* ========== CONFIG ========== */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "trendspy-3ba6d.firebaseapp.com",
+  databaseURL: "https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "trendspy-3ba6d",
+  storageBucket: "trendspy-3ba6d.appspot.com",
+  messagingSenderId: "1064401414241",
+  appId: "YOUR_APP_ID"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* ========== STATE ========== */
+const ordersGrid = document.getElementById('ordersGrid');
+const filterStatus = document.getElementById('filterStatus');
+const searchBox = document.getElementById('searchBox');
+const exportCSVBtn = document.getElementById('exportCSV');
+const themeSwitch = document.getElementById('themeSwitch');
+
+const detailsPanel = document.getElementById('detailsPanel');
+const closeDetails = document.getElementById('closeDetails');
+const detailBody = document.getElementById('detailBody');
+const detailId = document.getElementById('detailId');
+
+let ordersMap = new Map(); // key: orderId (contact|id) -> order object
+let ordersList = []; // cached array view
+
+/* SLA CONFIG (hours) */
+const SLA_HOURS = 48; // orders older than this and not delivered considered delayed
+
+/* UTIL: safe parse order timestamp
+   If order object contains tsISO use that; otherwise fall back to Date parsing.
+*/
+function parseOrderTs(o){
+  if(!o) return null;
+  if(o.tsISO) return new Date(o.tsISO);
+  // try ISO-like
+  if(o.ts && /^\d{4}-\d{2}-\d{2}T/.test(o.ts)) return new Date(o.ts);
+  // try locale parse (best-effort)
+  const d = new Date(o.ts);
+  if(!isNaN(d.getTime())) return d;
+  // fallback to now
+  return new Date();
+}
+
+/* ========== REALTIME LOAD + DEDUPLICATION ========== */
+function startOrdersListener(){
+  const ordersRef = ref(db, 'orders');
+
+  onValue(ordersRef, snapshot => {
+    ordersMap.clear();
+
+    snapshot.forEach(userSnap => {
+      const contact = userSnap.key;
+      userSnap.forEach(orderSnap => {
+        const o = orderSnap.val();
+        if(!o) return;
+        // create composite key to avoid duplicates across users with same order id
+        const key = `${contact}|${o.id}`;
+        // normalize: ensure tsISO exists for robust parsing going forward
+        if(o.ts && !o.tsISO){
+          // attempt to create an ISO version
+          const parsed = new Date(o.ts);
+          if(!isNaN(parsed.getTime())){
+            o.tsISO = parsed.toISOString();
+          } else {
+            // fallback to now
+            o.tsISO = new Date().toISOString();
+          }
+        }
+        ordersMap.set(key, {...o, __contact: contact});
+      });
+    });
+
+    // convert to array and sort: pending/active first then by ts desc
+    ordersList = Array.from(ordersMap.values())
+      .sort((a,b) => {
+        const priority = statusPriority(a.status) - statusPriority(b.status);
+        if(priority !== 0) return priority;
+        return parseOrderTs(b) - parseOrderTs(a);
+      });
+
+    renderOrdersGrid();
+  }, err => {
+    console.error('Orders listener error', err);
+    ordersGrid.innerHTML = `<div style="color:var(--muted)">Unable to load orders</div>`;
+  });
+}
+
+/* status priority for visual ordering: lower -> higher priority to show on top */
+function statusPriority(s){
+  switch(s){
+    case 'Pending': return 0;
+    case 'Accepted': return 1;
+    case 'Out for Delivery': return 2;
+    case 'Return Requested': return 3;
+    case 'Delivered': return 4;
+    case 'Cancelled': return 5;
+    default: return 6;
+  }
+}
+
+/* ========== RENDER GRID ========== */
+function renderOrdersGrid(){
+  if(!ordersList || ordersList.length === 0){
+    ordersGrid.innerHTML = `<div style="color:var(--muted)">No orders found</div>`;
+    return;
+  }
+
+  const statusFilter = filterStatus.value;
+  const q = (searchBox.value || '').trim().toLowerCase();
+
+  const filtered = ordersList.filter(o => {
+    if(statusFilter !== 'all' && o.status !== statusFilter) return false;
+    if(q){
+      const text = `${o.id} ${o.user || ''} ${o.contact || ''} ${o.total || ''} ${Object.values(o.items || {}).map(i=>i.title).join(' ')}`.toLowerCase();
+      return text.includes(q);
+    }
+    return true;
+  });
+
+  ordersGrid.innerHTML = filtered.map(o => renderOrderCardHtml(o)).join('');
+  // bind click handlers after rendering
+  bindGridHandlers();
+}
+
+/* produce card html (string) */
+function renderOrderCardHtml(o){
+  const ts = parseOrderTs(o);
+  const ageHours = Math.floor((Date.now() - ts.getTime()) / (1000*60*60));
+  const isDelayed = (o.status !== 'Delivered' && o.status !== 'Cancelled') && (ageHours >= SLA_HOURS);
+
+  // flags
+  const flags = [
+    isDelayed ? `<span class="flag delay">Delayed</span>` : '',
+    (o.issue && o.issue.toLowerCase().includes('damage')) ? `<span class="flag damage">Damaged</span>` : '',
+    (o.returnStatus) ? `<span class="flag return">${o.returnStatus}</span>` : ''
+  ].join('');
+
+  // status tag
+  const statusClass = o.status ? o.status.replaceAll(' ','').toLowerCase() : 'pending';
+
+  // compact items summary
+  const items = Object.values(o.items || {}).slice(0,3).map(i=>`${i.title} × ${i.qty}`).join(', ');
+
+  return `
+    <div class="card" data-contact="${o.__contact}" data-id="${o.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:800">${o.id}</div>
+          <small style="color:var(--muted)">${o.user || 'Guest'} • ${o.contact || ''}</small>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:800">${o.total || ''}</div>
+          <div style="margin-top:6px"><span class="tag ${statusClass}">${o.status}</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;color:var(--muted);font-size:13px">
+        ${items || '—'}
+      </div>
+
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <div>${flags}</div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          ${o.status === 'Cancelled' ? `<button class="ghost viewBtn">View</button>` :
+            o.status === 'Delivered' ? `<button class="ghost viewBtn">View</button>` :
+            `<button class="primary nextBtn">Next</button>
+             ${o.trackingStage > 0 ? `<button class="ghost prevBtn">Prev</button>` : ''}
+             <button class="ghost viewBtn">View</button>`
+          }
+        </div>
+      </div>
+
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+        <small>Placed: ${ts.toLocaleString()} • ${ageHours}h ago</small>
+      </div>
+    </div>
+  `;
+}
+
+/* ========== BIND HANDLERS (ensure no duplicate listeners) ========== */
+function bindGridHandlers(){
+  // view buttons (open details)
+  Array.from(ordersGrid.querySelectorAll('.card .viewBtn')).forEach(btn=>{
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      const card = ev.target.closest('.card');
+      const contact = card.dataset.contact;
+      const id = card.dataset.id;
+      openDetailsPanel(contact, id);
+    };
+  });
+
+  // next buttons
+  Array.from(ordersGrid.querySelectorAll('.card .nextBtn')).forEach(btn=>{
+    btn.onclick = async (ev) => {
+      ev.stopPropagation();
+      const card = ev.target.closest('.card');
+      const contact = card.dataset.contact;
+      const id = card.dataset.id;
+      await nextStage(contact, id);
+    };
+  });
+
+  // prev buttons
+  Array.from(ordersGrid.querySelectorAll('.card .prevBtn')).forEach(btn=>{
+    btn.onclick = async (ev) => {
+      ev.stopPropagation();
+      const card = ev.target.closest('.card');
+      const contact = card.dataset.contact;
+      const id = card.dataset.id;
+      await prevStage(contact, id);
+    };
+  });
+
+  // entire card click open details
+  Array.from(ordersGrid.querySelectorAll('.card')).forEach(card=>{
+    card.onclick = (ev) => {
+      const contact = card.dataset.contact;
+      const id = card.dataset.id;
+      openDetailsPanel(contact, id);
+    };
+  });
+}
+
+/* ========== DETAILS PANEL ========== */
+function openDetailsPanel(contact, id){
+  const key = `${contact}|${id}`;
+  const o = ordersMap.get(key) || ordersList.find(x => x.id === id && x.__contact === contact);
+  if(!o) return;
+
+  detailId.textContent = `${o.id} • ${o.user || ''}`;
+  detailBody.innerHTML = `
+    <div style="margin-top:10px">
+      <div style="font-weight:700">Status</div>
+      <div style="margin-top:6px"><span class="tag ${o.status.replaceAll(' ','').toLowerCase()}">${o.status}</span></div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-weight:700">Items</div>
+      <div style="color:var(--muted);margin-top:6px">
+        ${Object.values(o.items || {}).map(i=>`<div>${i.title} × ${i.qty} — ₹${i.price || ''}</div>`).join('')}
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-weight:700">Delivery Address</div>
+      <div style="color:var(--muted);margin-top:6px">${o.deliveryAddress || '—'}</div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-weight:700">Payment</div>
+      <div style="color:var(--muted);margin-top:6px">${o.paymentMethod || '—'} • ${o.paymentStatus || ''}</div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div style="font-weight:700">Timestamps</div>
+      <div style="color:var(--muted);margin-top:6px">Placed: ${parseOrderTs(o).toLocaleString()}</div>
+    </div>
+
+    ${o.remark ? `<div style="margin-top:12px"><div style="font-weight:700">Store Remark</div><div style="color:var(--muted);margin-top:6px">${o.remark}</div></div>` : ''}
+
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      ${o.status !== 'Cancelled' && o.status !== 'Delivered' ? `<button class="primary" id="detailNext">Next</button>` : ''}
+      ${o.trackingStage > 0 ? `<button class="ghost" id="detailPrev">Prev</button>` : ''}
+      <button class="ghost" id="detailRefresh">Refresh</button>
+      <button class="ghost" id="detailCancel">Cancel Order</button>
+    </div>
+  `;
+
+  // wire detail buttons (safe attach)
+  setTimeout(()=>{ // allow DOM to update
+    const bNext = document.getElementById('detailNext');
+    const bPrev = document.getElementById('detailPrev');
+    const bRefresh = document.getElementById('detailRefresh');
+    const bCancel = document.getElementById('detailCancel');
+
+    if(bNext) bNext.onclick = async ()=> { await nextStage(o.__contact, o.id); openDetailsPanel(o.__contact, o.id); };
+    if(bPrev) bPrev.onclick = async ()=> { await prevStage(o.__contact, o.id); openDetailsPanel(o.__contact, o.id); };
+    if(bRefresh) bRefresh.onclick = ()=> { openDetailsPanel(o.__contact, o.id); };
+    if(bCancel) bCancel.onclick = async ()=> {
+      const reason = prompt('Reason for cancellation:', 'Cancelled by store');
+      if(reason === null) return;
+      await cancelOrder(o.__contact, o.id, reason);
+      openDetailsPanel(o.__contact, o.id);
+    };
+
+  }, 50);
+
+  detailsPanel.classList.add('open');
+  detailsPanel.setAttribute('aria-hidden', 'false');
+}
+
+closeDetails.onclick = ()=> {
+  detailsPanel.classList.remove('open');
+  detailsPanel.setAttribute('aria-hidden', 'true');
+};
+
+/* ========== ORDER ACTIONS (update DB) ========== */
+async function nextStage(contact, id){
+  const key = `${contact}|${id}`;
+  const o = ordersMap.get(key);
+  if(!o) return;
+  try{
+    // compute next stage
+    const stages = ['Pending','Accepted','Out for Delivery','Delivered'];
+    let ts = parseOrderTs(o);
+    let idx = Number(o.trackingStage || 0);
+    if(idx < stages.length - 1) idx++;
+    o.trackingStage = idx;
+    o.status = stages[idx];
+    // persist
+    await update(ref(db, `orders/${contact}/${id}`), { trackingStage: o.trackingStage, status: o.status });
+  }catch(err){ console.error('nextStage err', err); alert('Unable to update order'); }
+}
+
+async function prevStage(contact, id){
+  const key = `${contact}|${id}`;
+  const o = ordersMap.get(key);
+  if(!o) return;
+  try{
+    let idx = Number(o.trackingStage || 0);
+    if(idx > 0) idx--;
+    const stages = ['Pending','Accepted','Out for Delivery','Delivered'];
+    o.trackingStage = idx;
+    o.status = stages[idx];
+    await update(ref(db, `orders/${contact}/${id}`), { trackingStage: o.trackingStage, status: o.status });
+  }catch(err){ console.error('prevStage err', err); alert('Unable to update order'); }
+}
+
+async function cancelOrder(contact, id, reason = 'Cancelled by store'){
+  const key = `${contact}|${id}`;
+  const o = ordersMap.get(key);
+  if(!o) return;
+  try{
+    o.status = 'Cancelled';
+    o.trackingStage = 0;
+    o.remark = reason;
+    await update(ref(db, `orders/${contact}/${id}`), { status: 'Cancelled', trackingStage: 0, remark: reason });
+  }catch(err){ console.error('cancel err', err); alert('Unable to cancel order'); }
+}
+
+/* wrapper to call cancel from details */
+async function cancelOrderWrapper(contact, id){
+  const r = prompt('Reason for cancellation:', 'Cancelled by store');
+  if(r === null) return;
+  await cancelOrder(contact, id, r);
+}
+
+/* ========== EXPORT CSV ========== */
+function exportToCSV(){
+  if(!ordersList || !ordersList.length){ alert('No orders to export'); return; }
+  const rows = [['Order ID','Contact','Customer','Status','Total','Placed At','Items','Remark','ReturnStatus']];
+  ordersList.forEach(o => {
+    const items = Object.values(o.items || {}).map(i=>`${i.title} x ${i.qty}`).join(' | ');
+    rows.push([o.id, o.contact, o.user || '', o.status, o.total || '', parseOrderTs(o).toISOString(), items, o.remark || '', o.returnStatus || '']);
+  });
+  const csv = rows.map(r => r.map(cell => `"${String(cell || '').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `trendspy_orders_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ========== FILTERS / SEARCH EVENTS ========== */
+filterStatus.onchange = renderOrdersGrid;
+searchBox.oninput = () => { renderOrdersGrid(); };
+
+/* export click */
+exportCSVBtn.onclick = exportToCSV;
+
+/* theme toggle */
+themeSwitch.onchange = (e) => {
+  document.body.classList.toggle('light', e.target.checked);
+};
+
+/* ========== INIT ========== */
+startOrdersListener();
+</script>
+<!-- PART 3: Charts, SLA widgets, Inventory heatmap, XLSX export, API examples -->
+<!-- Dependencies (if not already present): Chart.js, html2canvas, jspdf, SheetJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+<script type="module">
+/* PART 3: analytics, SLA, heatmap, exports, and API examples.
+   This script assumes:
+   - `ordersList` (Array) and `ordersMap` (Map) exist in global scope (from Part 2).
+   - `renderOrdersGrid()` exists and updates order UI when ordersList changes.
+   - There is a container in DOM where we can inject widgets. We'll create a small panel here.
+*/
+
+(() => {
+  // CREATE PANEL UI (top-right fixed)
+  const panel = document.createElement('div');
+  panel.style.position = 'fixed';
+  panel.style.right = '18px';
+  panel.style.bottom = '18px';
+  panel.style.width = '360px';
+  panel.style.maxWidth = 'calc(100% - 40px)';
+  panel.style.background = 'rgba(12,16,34,0.9)';
+  panel.style.border = '1px solid rgba(255,255,255,0.06)';
+  panel.style.padding = '12px';
+  panel.style.borderRadius = '12px';
+  panel.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)';
+  panel.style.zIndex = 9999;
+  panel.style.color = 'white';
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Admin Analytics</strong>
+      <div style="display:flex;gap:8px">
+        <button id="exportXLSX" style="background:linear-gradient(90deg,#ec4899,#8b5cf6);border:none;padding:6px 8px;border-radius:8px;color:white;cursor:pointer">XLSX</button>
+        <button id="exportPDF" style="background:transparent;border:1px solid rgba(255,255,255,0.08);padding:6px 8px;border-radius:8px;color:white;cursor:pointer">PDF</button>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <canvas id="adminStatusChart" style="width:100%;height:150px"></canvas>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <div style="flex:1">
+        <small style="color:var(--muted)">SLA Violations</small>
+        <div id="slaCount" style="font-weight:800;font-size:20px">0</div>
+      </div>
+      <div style="flex:1">
+        <small style="color:var(--muted)">Returns</small>
+        <div id="returnCount" style="font-weight:800;font-size:20px">0</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <small style="color:var(--muted)">Inventory Heatmap (sample)</small>
+      <div id="inventoryHeatmap" style="margin-top:8px;display:grid;grid-template-columns:repeat(6,1fr);gap:6px"></div>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  // CHARTS state
+  let adminCharts = {};
+
+  // UTIL: parse date/time (reuse part2 helper if present)
+  const parseOrderTs = window.parseOrderTs || (o => (o && o.tsISO) ? new Date(o.tsISO) : (o && o.ts) ? new Date(o.ts) : new Date());
+
+  function computeMetrics(){
+    const statusCounts = { Pending:0, Accepted:0, 'Out for Delivery':0, Delivered:0, Cancelled:0 };
+    let slaViolations = 0;
+    let returns = 0;
+    const revenueByDay = {}; // day->amount
+    const inventoryCounts = {}; // sample categories -> units sold (derived)
+
+    (window.ordersList || []).forEach(o => {
+      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+      if(o.returnStatus) returns++;
+      // SLA detection (taken from Part2 SLA_HOURS if present or default 48)
+      const SLA_HOURS = window.SLA_HOURS || 48;
+      const placed = parseOrderTs(o);
+      const ageHours = Math.floor((Date.now() - placed.getTime()) / (1000*60*60));
+      if(o.status !== 'Delivered' && o.status !== 'Cancelled' && ageHours >= SLA_HOURS) slaViolations++;
+
+      if(o.status === 'Delivered'){
+        const amt = parseInt(String(o.total || '0').replace(/[₹,]/g,'')) || 0;
+        const dayKey = placed.toISOString().slice(0,10);
+        revenueByDay[dayKey] = (revenueByDay[dayKey] || 0) + amt;
+      }
+
+      // build sample inventory counts
+      Object.values(o.items || {}).forEach(i=>{
+        const cat = i.category || 'Uncategorized';
+        inventoryCounts[cat] = (inventoryCounts[cat] || 0) + (i.qty || 1);
+      });
+    });
+
+    return { statusCounts, slaViolations, returns, revenueByDay, inventoryCounts };
+  }
+
+  function renderStatusChart(){
+    const ctx = document.getElementById('adminStatusChart').getContext('2d');
+    const metrics = computeMetrics();
+    const labels = Object.keys(metrics.statusCounts);
+    const data = Object.values(metrics.statusCounts);
+    adminCharts.status?.destroy?.();
+    adminCharts.status = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: ['#facc15','#ec4899','#8b5cf6','#22c55e','#ef4444'] }] },
+      options: { plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+    });
+
+    // SLA and returns numbers
+    document.getElementById('slaCount').textContent = metrics.slaViolations;
+    document.getElementById('returnCount').textContent = metrics.returns;
+
+    // inventory heatmap build
+    renderInventoryHeatmap(metrics.inventoryCounts);
+  }
+
+  function renderInventoryHeatmap(counts){
+    const container = document.getElementById('inventoryHeatmap');
+    container.innerHTML = '';
+    // prepare top 12 categories (or sample grid)
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    if(entries.length === 0){
+      // show placeholder squares
+      for(let i=0;i<12;i++){
+        const s = document.createElement('div');
+        s.style.padding = '14px';
+        s.style.borderRadius = '8px';
+        s.style.background = 'rgba(255,255,255,0.03)';
+        s.style.fontSize = '12px';
+        s.style.textAlign = 'center';
+        s.innerHTML = '-';
+        container.appendChild(s);
+      }
+      return;
+    }
+
+    // compute simple color scale based on max
+    const max = Math.max(...entries.map(e=>e[1]));
+    entries.forEach(([cat, val])=>{
+      const intensity = Math.round((val / (max || 1)) * 220); // 0-220
+      const bg = `rgb(${255-intensity}, ${140 + Math.round(intensity/2)}, ${220 - Math.round(intensity/3)})`;
+      const s = document.createElement('div');
+      s.style.padding = '8px';
+      s.style.borderRadius = '8px';
+      s.style.background = bg;
+      s.style.color = '#111';
+      s.style.fontSize = '12px';
+      s.style.textAlign = 'center';
+      s.style.fontWeight = '700';
+      s.innerHTML = `${cat}<br><small style="font-weight:600;font-size:11px">${val}</small>`;
+      container.appendChild(s);
+    });
+
+    // fill remainder with blanks
+    const fill = 12 - entries.length;
+    for(let i=0;i<fill;i++){
+      const s = document.createElement('div');
+      s.style.padding = '8px';
+      s.style.borderRadius = '8px';
+      s.style.background = 'rgba(255,255,255,0.03)';
+      s.style.textAlign = 'center';
+      s.innerHTML = '—';
+      container.appendChild(s);
+    }
+  }
+
+  // export XLSX using SheetJS
+  function exportOrdersXLSX(){
+    const rows = (window.ordersList || []).map(o=>{
+      const items = Object.values(o.items || {}).map(i=>`${i.title} x ${i.qty}`).join(' | ');
+      return {
+        orderId: o.id,
+        contact: o.contact,
+        user: o.user || '',
+        status: o.status,
+        total: o.total,
+        placedAt: (parseOrderTs(o)).toISOString(),
+        items,
+        remark: o.remark || '',
+        returnStatus: o.returnStatus || ''
+      };
+    });
+    if(!rows.length){ alert('No orders to export'); return; }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'orders');
+    XLSX.writeFile(wb, `trendspy_orders_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // export PDF summary (screenshot the panel)
+  async function exportPanelPDF(){
+    const canvas = await html2canvas(panel, { scale: 2 });
+    const pdf = new jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const img = canvas.toDataURL('image/png');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    // scale image to fit width
+    const ratio = canvas.width / canvas.height;
+    const w = pageWidth - 48;
+    const h = w / ratio;
+    pdf.addImage(img, 'PNG', 24, 24, w, h);
+    pdf.save(`trendspy_dashboard_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+
+  // wire buttons
+  document.getElementById('exportXLSX').onclick = exportOrdersXLSX;
+  document.getElementById('exportPDF').onclick = exportPanelPDF;
+
+  // live update when ordersList changes: best-effort approach is to poll for changes in window.ordersList every second for diffs
+  let lastFingerprint = '';
+  function fingerprintOrders(){
+    const arr = (window.ordersList || []).map(o => `${o.id}:${o.status}:${o.total}:${o.returnStatus||''}`).join('|');
+    return arr;
+  }
+  function liveUpdateLoop(){
+    const fp = fingerprintOrders();
+    if(fp !== lastFingerprint){
+      lastFingerprint = fp;
+      renderStatusChart();
+    }
+    requestAnimationFrame(liveUpdateLoop);
+  }
+  liveUpdateLoop();
+
+  // Helpful: expose a function to produce enterprise grade report JSON (aggregate by day, status)
+  window.generateEnterpriseReport = function({startDate, endDate} = {}){
+    // return aggregated data ready to be sent to reporting system
+    const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+    const end = endDate ? new Date(endDate) : new Date();
+    const byDay = {}; // day -> { revenue, orders, delivered }
+    const statusCounts = {};
+    (window.ordersList || []).forEach(o=>{
+      const ts = parseOrderTs(o);
+      if(ts < start || ts > end) return;
+      const day = ts.toISOString().slice(0,10);
+      byDay[day] = byDay[day] || { revenue:0, orders:0, delivered:0 };
+      const amt = parseInt(String(o.total || '0').replace(/[₹,]/g,'')) || 0;
+      byDay[day].revenue += (o.status === 'Delivered' ? amt : 0);
+      byDay[day].orders++;
+      if(o.status === 'Delivered') byDay[day].delivered++;
+      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+    });
+    return { byDay, statusCounts, generatedAt: new Date().toISOString() };
+  };
+
+  // expose export functions
+  window.exportOrdersXLSX = exportOrdersXLSX;
+  window.exportPanelPDF = exportPanelPDF;
+
+  // quick initial render
+  setTimeout(renderStatusChart, 300);
+
+})();
+</script>
+
+<!-- Example Node/Express API (copy to server) -->
+<!-- Save below as server.js (example) and deploy behind auth -->
+<!-- NOTE: This is only an example. Use secure auth (OAuth, API keys) in production. -->
+<!--
+const express = require('express');
+const admin = require('firebase-admin');
+const bodyParser = require('body-parser');
+
+const serviceAccount = require('./firebase-service-account.json'); // generate from Firebase console
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app'
+});
+
+const app = express();
+app.use(bodyParser.json());
+
+// simple middleware - replace with real auth in prod
+function adminAuth(req, res, next){
+  const key = req.header('x-admin-key');
+  if(key !== process.env.ADMIN_KEY) return res.status(403).json({error:'forbidden'});
+  next();
+}
+
+// list orders (optionally by date)
+app.get('/api/orders', adminAuth, async (req,res) => {
+  const db = admin.database();
+  const ref = db.ref('orders');
+  const snap = await ref.once('value');
+  const data = snap.val() || {};
+  // flatten
+  const arr = [];
+  Object.keys(data).forEach(contact => {
+    Object.keys(data[contact] || {}).forEach(id => {
+      const o = data[contact][id];
+      o.contact = contact;
+      arr.push(o);
+    });
+  });
+  res.json({ count: arr.length, orders: arr });
+});
+
+// get single order
+app.get('/api/orders/:contact/:id', adminAuth, async (req,res) => {
+  const {contact,id} = req.params;
+  const db = admin.database();
+  const snap = await db.ref(`orders/${contact}/${id}`).once('value');
+  if(!snap.exists()) return res.status(404).json({error:'not found'});
+  res.json(snap.val());
+});
+
+// aggregated sales report
+app.get('/api/reports/sales', adminAuth, async (req,res) => {
+  const { start, end } = req.query;
+  const db = admin.database();
+  const snap = await db.ref('orders').once('value');
+  const data = snap.val() || {};
+  const byDay = {};
+  const startDate = start ? new Date(start) : new Date('1970-01-01');
+  const endDate = end ? new Date(end) : new Date();
+  Object.keys(data).forEach(contact => {
+    Object.keys(data[contact] || {}).forEach(id => {
+      const o = data[contact][id];
+      const ts = o.tsISO ? new Date(o.tsISO) : new Date(o.ts || Date.now());
+      if(ts < startDate || ts > endDate) return;
+      const day = ts.toISOString().slice(0,10);
+      byDay[day] = byDay[day] || { revenue:0, orders:0, delivered:0 };
+      const amt = parseInt(String(o.total || '0').replace(/[₹,]/g,'')) || 0;
+      byDay[day].orders++;
+      if(o.status === 'Delivered'){ byDay[day].delivered++; byDay[day].revenue += amt; }
+    });
+  });
+  res.json({ range:{start:startDate.toISOString(),end:endDate.toISOString()}, byDay });
+});
+
+// start
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log('Admin API running on', PORT));
+-->
+

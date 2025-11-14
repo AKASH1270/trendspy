@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trendspy — Enterprise Reports</title>
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+/* ===== Trendspy PRO Reporting Theme ===== */
+:root{
+  --bg:#070813;
+  --panel:rgba(255,255,255,0.05);
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --accent:#ec4899;
+  --accent2:#8b5cf6;
+  --success:#22c55e;
+  --danger:#ef4444;
+  font-family:'Poppins';
+}
+body.light{
+  --bg:#f3f4f6;
+  --panel:#ffffff;
+  --text:#1e293b;
+  --muted:#64748b;
+}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  transition:.3s;
+}
+
+/* Layout */
+.page{
+  max-width:1300px;
+  margin:20px auto;
+  padding:0 20px;
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px;
+  background:var(--panel);
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+.logo{
+  font-weight:800;
+  font-size:20px;
+}
+.btn{
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  border:none;
+  font-weight:700;
+}
+.primary{ background:linear-gradient(90deg,var(--accent),var(--accent2));color:white }
+.ghost{ background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--muted) }
+
+/* Grid */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:18px;
+  margin-top:20px;
+}
+.card{
+  background:var(--panel);
+  border-radius:14px;
+  padding:16px;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.card h3{
+  margin:0 0 10px 0;
+  font-size:16px;
+  font-weight:700;
+  color:var(--muted);
+}
+.metric{
+  font-weight:800;
+  font-size:22px;
+}
+
+/* Table */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+th,td{
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  font-size:14px;
+}
+th{ text-align:left;color:var(--accent2) }
+
+/* Report Actions */
+.action-bar{
+  display:flex;
+  gap:10px;
+  margin-top:20px;
+}
+
+/* Responsive */
+@media(max-width:600px){
+  .header{ flex-direction:column; gap:10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="header">
+    <div class="logo">📊 Trendspy Enterprise Reports</div>
+
+    <div style="display:flex;align-items:center;gap:10px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="themeSwitch">
+        <span style="font-size:13px">Light</span>
+      </label>
+
+      <button onclick="window.location.href='shop.html'" class="ghost">← Back to Admin</button>
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="action-bar">
+    <button id="downloadPDF" class="primary">📄 Download PDF Report</button>
+    <button id="downloadCSV" class="ghost">📥 Export CSV</button>
+  </div>
+
+  <!-- METRICS GRID -->
+  <div class="grid" id="metricGrid">
+    <div class="card"><h3>Total Revenue</h3><div class="metric" id="mRevenue">₹0</div></div>
+    <div class="card"><h3>Total Orders</h3><div class="metric" id="mOrders">0</div></div>
+    <div class="card"><h3>Delivered Orders</h3><div class="metric" id="mDelivered">0</div></div>
+    <div class="card"><h3>Cancelled Orders</h3><div class="metric" id="mCancelled">0</div></div>
+    <div class="card"><h3>Average Order Value</h3><div class="metric" id="mAOV">₹0</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="grid">
+    <div class="card"><h3>Daily Revenue Trend</h3><canvas id="dailyChart"></canvas></div>
+    <div class="card"><h3>Monthly Revenue Trend</h3><canvas id="monthlyChart"></canvas></div>
+    <div class="card"><h3>Category Performance</h3><canvas id="categoryChart"></canvas></div>
+    <div class="card"><h3>Status Breakdown</h3><canvas id="statusChart"></canvas></div>
+  </div>
+
+  <!-- TOP PRODUCTS -->
+  <div class="card" style="margin-top:20px">
+    <h3>🏆 Top Products</h3>
+    <table id="topProducts">
+      <thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- TOP CUSTOMERS -->
+  <div class="card" style="margin-top:20px">
+    <h3>👤 Top Customers</h3>
+    <table id="topCustomers">
+      <thead><tr><th>Customer</th><th>Orders</th><th>Spend</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== REPORTING SCRIPT ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "trendspy-3ba6d.firebaseapp.com",
+  databaseURL: "https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "trendspy-3ba6d",
+  storageBucket: "trendspy-3ba6d.appspot.com",
+  messagingSenderId: "1064401414241",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Helpers
+const $ = id => document.getElementById(id);
+
+// Theme
+if(localStorage.getItem("trendspy_admin_theme")==="light"){
+  document.body.classList.add("light");
+  $("themeSwitch").checked = true;
+}
+$("themeSwitch").onchange = () => {
+  document.body.classList.toggle("light", $("themeSwitch").checked);
+  localStorage.setItem("trendspy_admin_theme", $("themeSwitch").checked ? "light" : "dark");
+};
+
+// GLOBAL DATA
+let allOrders = [];
+
+function loadData(){
+  const refOrders = ref(db, "orders");
+
+  onValue(refOrders, snap => {
+    allOrders = [];
+    snap.forEach(u => u.forEach(o => allOrders.push(o.val())));
+    computeMetrics();
+    buildCharts();
+    buildTables();
+  });
+}
+
+// METRICS
+function computeMetrics(){
+  let totalRevenue = 0;
+  let deliveredCount = 0;
+  let cancelledCount = 0;
+
+  allOrders.forEach(o => {
+    if(o.status === "Delivered"){
+      deliveredCount++;
+      totalRevenue += parseInt(o.total.replace(/[₹,]/g,"")) || 0;
+    }
+    if(o.status === "Cancelled") cancelledCount++;
+  });
+
+  const aov = deliveredCount ? Math.round(totalRevenue / deliveredCount) : 0;
+
+  $("mRevenue").textContent = "₹" + totalRevenue.toLocaleString();
+  $("mOrders").textContent = allOrders.length;
+  $("mDelivered").textContent = deliveredCount;
+  $("mCancelled").textContent = cancelledCount;
+  $("mAOV").textContent = "₹" + aov.toLocaleString();
+}
+
+// CHARTS
+let charts = {};
+
+function buildCharts(){
+  Object.values(charts).forEach(c=>c.destroy && c.destroy());
+
+  let daily = {};
+  let monthly = {};
+  let categories = {};
+  let statusMap = {};
+
+  allOrders.forEach(o => {
+    let ts = new Date(o.ts);
+    let day = ts.toLocaleDateString();
+    let month = ts.toLocaleString("default",{month:"short"});
+
+    // status
+    statusMap[o.status] = (statusMap[o.status]||0)+1;
+
+    // only delivered count towards revenue
+    if(o.status === "Delivered"){
+      let amt = parseInt(o.total.replace(/[₹,]/g,"")) || 0;
+      daily[day] = (daily[day]||0)+amt;
+      monthly[month] = (monthly[month]||0)+amt;
+
+      Object.values(o.items).forEach(i => {
+        categories[i.title] = (categories[i.title]||0) + (i.qty||1);
+      });
+    }
+  });
+
+  charts.daily = new Chart($("dailyChart"),{
+    type:"line",
+    data:{ labels:Object.keys(daily), datasets:[{label:"Daily Revenue", data:Object.values(daily), borderColor:"#ec4899"} ] }
+  });
+
+  charts.monthly = new Chart($("monthlyChart"),{
+    type:"bar",
+    data:{ labels:Object.keys(monthly), datasets:[{label:"Monthly Revenue", data:Object.values(monthly), backgroundColor:"#8b5cf6"} ] }
+  });
+
+  charts.category = new Chart($("categoryChart"),{
+    type:"bar",
+    data:{ labels:Object.keys(categories), datasets:[{label:"Units Sold", data:Object.values(categories), backgroundColor:"#22c55e"} ] }
+  });
+
+  charts.status = new Chart($("statusChart"),{
+    type:"doughnut",
+    data:{ labels:Object.keys(statusMap), datasets:[{data:Object.values(statusMap), backgroundColor:["#ec4899","#8b5cf6","#3b82f6","#22c55e","#ef4444"]}] }
+  });
+}
+
+// TABLES
+function buildTables(){
+  // TOP PRODUCTS
+  let productMap = {};
+
+  allOrders.forEach(o => {
+    if(o.status !== "Delivered") return;
+    Object.values(o.items).forEach(i=>{
+      if(!productMap[i.title]) productMap[i.title]={units:0,revenue:0};
+      productMap[i.title].units += (i.qty||1);
+      productMap[i.title].revenue += (i.price||0) * (i.qty||1);
+    });
+  });
+
+  const tbodyP = $("topProducts").querySelector("tbody");
+  tbodyP.innerHTML = Object.entries(productMap)
+    .sort((a,b)=>b[1].units-a[1].units)
+    .slice(0,10)
+    .map(([name,data])=>`
+      <tr>
+        <td>${name}</td>
+        <td>${data.units}</td>
+        <td>₹${data.revenue}</td>
+      </tr>
+    `).join("");
+
+  // TOP CUSTOMERS
+  let custMap = {};
+  allOrders.forEach(o => {
+    if(!custMap[o.contact]) custMap[o.contact] = {name:o.user, orders:0, spend:0};
+    custMap[o.contact].orders++;
+    if(o.status === "Delivered"){
+      custMap[o.contact].spend += parseInt(o.total.replace(/[₹,]/g,'')) || 0;
+    }
+  });
+
+  const tbodyC = $("topCustomers").querySelector("tbody");
+  tbodyC.innerHTML = Object.values(custMap)
+    .sort((a,b)=>b.spend-a.spend)
+    .slice(0,10)
+    .map(c=>`
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.orders}</td>
+        <td>₹${c.spend}</td>
+      </tr>
+    `).join("");
+}
+
+// CSV DOWNLOAD
+$("downloadCSV").onclick = () => {
+  let csv = "Order ID,User,Phone,Status,Total,Timestamp\n";
+  allOrders.forEach(o=>{
+    csv += `${o.id},${o.user},${o.contact},${o.status},${o.total},${o.ts}\n`;
+  });
+
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+  a.download = "trendspy_report.csv";
+  a.click();
+};
+
+// PDF DOWNLOAD
+$("downloadPDF").onclick = async () => {
+  const { jsPDF } = window.jspdf;
+  let pdf = new jsPDF("p","pt","a4");
+
+  pdf.text("Trendspy - Enterprise Report", 20, 30);
+  pdf.text("Generated: " + new Date().toLocaleString(), 20, 50);
+
+  const full = document.body;
+  const canvas = await html2canvas(full);
+  const img = canvas.toDataURL("image/jpeg",0.8);
+
+  const width = 550;
+  const height = canvas.height * (width/canvas.width);
+
+  pdf.addImage(img,"JPEG",20,70,width,height);
+  pdf.save("Trendspy_Report.pdf");
+};
+
+// init
+loadData();
+
+</script>
+</body>
+</html>

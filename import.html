@@ -1,318 +1,637 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trendspy — Product Management</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trendspy — Product Management (Import)</title>
 
-<style>
-:root{
-  --bg:#0b0f1e;
-  --accent:#ec4899;
-  --accent2:#8b5cf6;
-  --muted:#94a3b8;
-  --glass:rgba(255,255,255,0.05);
-  --success:#22c55e;
-  font-family:'Poppins',sans-serif;
-  color:#e6eef8;
-}
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-body{
-  margin:0;
-  background:radial-gradient(circle at top,#1a1035,#0b0f1e 80%);
-  display:flex;flex-direction:column;align-items:center;
-  min-height:100vh;
-  padding:30px 20px;
-}
+  <style>
+    :root{
+      --bg:#0b0f1e;
+      --accent:#ec4899;
+      --accent2:#8b5cf6;
+      --muted:#94a3b8;
+      --glass:rgba(255,255,255,0.05);
+      --success:#22c55e;
+      --danger:#ef4444;
+      --text:#e6eef8;
+      font-family:'Poppins',sans-serif;
+    }
+    body{
+      margin:0;
+      background:radial-gradient(circle at top,#1a1035,#0b0f1e 80%);
+      min-height:100vh;
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      transition:background .3s,color .3s;
+      padding:24px;
+      box-sizing:border-box;
+    }
 
-header{
-  display:flex;align-items:center;justify-content:center;
-  gap:10px;margin-bottom:20px;
-}
-.logo{
-  width:46px;height:46px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:20px;color:#0a0a0a;
-}
-h1{
-  font-size:28px;margin:0;
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  font-weight:700;
-}
+    /* Light theme (Trendspy PRO) */
+    body.light{
+      --bg:#f8fafc;
+      --accent:#ec4899;
+      --accent2:#8b5cf6;
+      --muted:#475569;
+      --glass:rgba(255,255,255,0.96);
+      --text:#0b1220;
+      background:linear-gradient(180deg,#f9fafb,#eef2ff);
+      color:var(--text);
+    }
 
-.container{
-  background:rgba(255,255,255,0.05);
-  border-radius:16px;
-  padding:24px;
-  width:95%;max-width:900px;
-  box-shadow:0 0 25px rgba(236,72,153,0.15);
-  backdrop-filter:blur(10px);
-  border:1px solid rgba(255,255,255,0.08);
-}
+    /* Container & header */
+    .page-wrap{max-width:1200px;margin:0 auto;}
+    header{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:14px 18px;border-radius:14px;
+      background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.04);
+      box-shadow:0 6px 30px rgba(0,0,0,0.35);
+      margin-bottom:20px;
+    }
+    .header-left{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:56px;height:56px;border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#08101a;
+      box-shadow:0 8px 30px rgba(236,72,153,0.08);
+    }
+    .brand-title{font-size:18px;font-weight:800;margin:0}
+    .brand-sub{font-size:12px;color:var(--muted);margin-top:4px}
 
-fieldset{
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:14px;
-  margin-top:16px;
-  background:rgba(255,255,255,0.03);
-  padding:16px;
-  transition:.3s;
-}
-fieldset:hover{box-shadow:0 0 10px rgba(236,72,153,0.15);}
-legend{
-  color:var(--accent);
-  padding:0 8px;
-  font-weight:600;
-}
+    /* theme toggle in header */
+    .header-controls{display:flex;align-items:center;gap:12px}
+    .theme-toggle{
+      display:flex;align-items:center;gap:8px;padding:8px;border-radius:12px;background:var(--glass);cursor:pointer;border:1px solid rgba(255,255,255,0.04)
+    }
+    .toggle-slider{width:46px;height:24px;background:#222;border-radius:999px;position:relative;flex-shrink:0}
+    .toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:white;transition:transform .22s}
+    body.light .toggle-slider{background:#e6e6e6}
+    body.light .toggle-knob{transform:translateX(22px)}
 
-input,select{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  margin:5px 0 10px 0;
-  border:1px solid rgba(255,255,255,0.1);
-  background:rgba(255,255,255,0.07);
-  color:#fff;
-}
-input:focus{outline:none;border-color:var(--accent);}
+    /* floating theme toggle */
+    .floating-toggle{
+      position:fixed;right:18px;bottom:18px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+      color:white;padding:10px;border-radius:999px;box-shadow:0 12px 30px rgba(0,0,0,0.45);cursor:pointer;z-index:9999;
+      display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;
+    }
+    .floating-toggle small{font-weight:600;opacity:.9}
 
-input[type=file]{
-  border:1px dashed rgba(255,255,255,0.2);
-  padding:8px;
-  color:#a0aec0;
-  background:rgba(255,255,255,0.03);
-  text-align:center;
-}
+    /* main panel */
+    .container{
+      background:rgba(255,255,255,0.04);
+      border-radius:14px;padding:20px;border:1px solid rgba(255,255,255,0.04);
+      box-shadow:0 10px 40px rgba(0,0,0,0.45);
+    }
 
-button{
-  padding:10px 16px;
-  border-radius:10px;
-  border:none;
-  font-weight:600;
-  cursor:pointer;
-  margin-top:5px;
-  transition:.3s;
-}
-button.primary{
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  color:#fff;
-  box-shadow:0 0 10px rgba(236,72,153,0.3);
-}
-button.primary:hover{filter:brightness(1.2);transform:translateY(-1px);}
-button.ghost{
-  background:transparent;
-  border:1px solid rgba(255,255,255,0.15);
-  color:#e6eef8;
-}
-button.ghost:hover{background:rgba(255,255,255,0.08);}
+    p.note{color:var(--muted);font-size:14px;margin:0 0 12px 0}
+    .small{font-size:13px;color:var(--muted)}
+    fieldset{border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin-top:14px;background:rgba(255,255,255,0.02)}
+    legend{padding:0 8px;color:var(--accent);font-weight:700}
 
-table{
-  width:100%;border-collapse:collapse;
-  margin-top:20px;font-size:14px;
-}
-th,td{padding:10px;text-align:left;}
-th{border-bottom:1px solid rgba(255,255,255,0.1);color:var(--accent);}
-tr:hover{background:rgba(255,255,255,0.05);}
-td button{font-size:12px;padding:5px 10px;}
+    input,textarea,select{width:100%;padding:10px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:inherit;font-family:inherit}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 
-#bulkDeleteBtn{display:none;margin-top:8px;}
-#denied{color:#ef4444;font-weight:600;margin-top:40px;text-align:center;}
+    input[type=file]{padding:12px;border:1px dashed rgba(255,255,255,0.08);text-align:center}
 
-footer{
-  margin-top:30px;
-  color:var(--muted);
-  font-size:12px;
-  text-align:center;
-}
+    .flex{display:flex;gap:10px;align-items:center}
+    .flex .input-inline{flex:1}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    button{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    .primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;box-shadow:0 10px 30px rgba(236,72,153,0.08)}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
 
-.toast{
-  position:fixed;bottom:20px;right:20px;
-  background:rgba(0,0,0,0.85);
-  padding:10px 14px;border-radius:10px;
-  font-size:13px;
-  color:white;
-  box-shadow:0 0 15px rgba(236,72,153,0.4);
-  animation:fade 1.2s ease forwards;
-}
-@keyframes fade{
-  0%{opacity:0;transform:translateY(10px);}
-  20%{opacity:1;}
-  80%{opacity:1;}
-  100%{opacity:0;transform:translateY(10px);}
-}
-</style>
+    .table-wrap{margin-top:18px;overflow:auto;border-radius:8px}
+    table{width:100%;border-collapse:collapse;font-size:14px;background:transparent}
+    th,td{padding:12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
+    th{color:var(--accent);position:sticky;top:0;background:linear-gradient(180deg, rgba(11,15,30,0.9), rgba(11,15,30,0.6));backdrop-filter:blur(6px)}
+    tr:hover{background:rgba(255,255,255,0.02)}
+    td img{border-radius:8px;object-fit:cover}
+
+    .tag{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02);font-size:12px}
+    .truncated{max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    .toast{position:fixed;bottom:20px;right:20px;background:rgba(0,0,0,0.85);padding:10px 14px;border-radius:10px;font-size:13px;color:white;box-shadow:0 0 15px rgba(236,72,153,0.4);animation:fade 1.2s ease forwards;z-index:9999}
+    @keyframes fade{0%{opacity:0;transform:translateY(8px)}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(8px)}}
+
+    .denied{color:var(--danger);font-weight:700;text-align:center;padding:32px}
+
+    footer{margin-top:28px;text-align:center;color:var(--muted);font-size:13px}
+
+    /* responsive */
+    @media (max-width:900px){
+      header{flex-direction:column;align-items:flex-start;gap:12px}
+      .flex{flex-direction:column}
+      .logo{width:48px;height:48px}
+      .brand-title{font-size:16px}
+      .table-wrap{overflow:auto}
+      .floating-toggle{right:12px;bottom:12px;padding:8px;font-size:12px}
+    }
+  </style>
 </head>
 
 <body>
-<header>
-  <div class="logo">T</div>
-  <h1>Trendspy Product Manager</h1>
-</header>
+  <div class="page-wrap">
+    <!-- HEADER -->
+    <header>
+      <div class="header-left">
+        <div class="logo" aria-hidden>TS</div>
+        <div>
+          <div class="brand-title">Trendspy Product Manager</div>
+          <div class="brand-sub small">Import • Edit • Bulk Upload — Trendspy PRO</div>
+        </div>
+      </div>
 
-<div class="container" id="main">
-  <p style="color:var(--muted)">Manage your store inventory — Add, Import, Update or Delete Products.</p>
+      <div class="header-controls">
+        <!-- Header theme toggle (Option C includes both header + floating) -->
+        <div id="headerThemeToggle" class="theme-toggle" title="Toggle light / dark">
+          <div style="font-weight:700;font-size:13px">Theme</div>
+          <div class="toggle-slider" aria-hidden>
+            <div class="toggle-knob" id="toggleKnob"></div>
+          </div>
+        </div>
 
-  <!-- Add Product -->
-  <fieldset>
-    <legend>🪄 Add / Edit Product</legend>
-    <form id="productForm">
-      <input type="hidden" id="pid">
-      <label>Title:</label><input id="title" placeholder="e.g. Classic Hoodie" required>
-      <label>Category:</label><input id="category" placeholder="e.g. Hoodies / T-Shirts">
-      <label>Price (₹):</label><input id="price" type="number" required>
-      <label>Discount Price (₹):</label><input id="discountPrice" type="number">
-      <label>Image URL:</label><input id="image" placeholder="https://picsum.photos/400">
-      <button type="submit" class="primary">💾 Save Product</button>
-    </form>
-  </fieldset>
+        <button class="ghost" id="backToDashboard" title="Back to Admin Dashboard">⬅ Back to Dashboard</button>
+      </div>
+    </header>
 
-  <!-- Excel Import -->
-  <fieldset>
-    <legend>📥 Import from Excel</legend>
-    <input type="file" id="fileInput" accept=".xlsx,.xls">
-    <button id="importBtn" class="primary">Import Excel</button>
-  </fieldset>
+    <!-- Floating theme toggle (Option C) -->
+    <div id="floatingToggle" class="floating-toggle" title="Toggle theme">
+      <span id="floatingLabel">Dark</span>
+      <small id="floatingIcon">🌓</small>
+    </div>
 
-  <div id="productTable"></div>
-  <button id="bulkDeleteBtn" class="ghost">🗑 Delete Selected Products</button>
-  <button class="ghost" style="margin-top:10px" onclick="window.location.href='shop.html'">⬅ Back to Dashboard</button>
-</div>
+    <!-- MAIN -->
+    <div class="container" id="main">
+      <p class="note">
+        Manage inventory — add/edit/delete products and import from Excel. Excel columns supported (case-insensitive):
+        <br><b>ID | Title | Price | Category | Desc | Variants | Variant1 | Variant2 | Image1 | Image2 | Image3 | ...</b>
+        <br><span class="small">Images may be in multiple columns or pipe/comma-separated inside one Image cell. Variants may be in multiple columns or comma/pipe-separated in single cell.</span>
+      </p>
 
-<div id="denied" style="display:none">🚫 Access Denied. Please open this page from Admin Dashboard.</div>
-<footer>© 2025 Trendspy | Secure Product Manager</footer>
+      <!-- Add Product -->
+      <fieldset>
+        <legend>🪄 Add / Edit Product (Manual)</legend>
+        <form id="productForm">
+          <input type="hidden" id="pid">
+          <div class="flex">
+            <div class="input-inline">
+              <label>Title:</label>
+              <input id="title" required>
+            </div>
+            <div style="width:160px">
+              <label>Price (₹):</label>
+              <input id="price" type="number" required>
+            </div>
+          </div>
 
-<script>
-const el=id=>document.getElementById(id);
-const urlParams=new URLSearchParams(window.location.search);
-const authKey=urlParams.get('auth');
+          <div class="flex">
+            <div class="input-inline">
+              <label>Category:</label>
+              <input id="category" placeholder="e.g. Hoodies / T-Shirts">
+            </div>
+            <div style="width:220px">
+              <label>Variants (comma or pipe separated OR leave blank for One Size):</label>
+              <input id="variants" placeholder="S,M,L or S|M|L">
+            </div>
+          </div>
 
-/* === ACCESS CONTROL === */
-if(authKey!=='trendspy-admin'){
-  el('main').style.display='none';
-  el('denied').style.display='block';
-  throw new Error('Unauthorized Access');
-}
+          <label>Description:</label>
+          <textarea id="desc" rows="3" placeholder="Short product description"></textarea>
 
-/* === STORAGE === */
-let products=JSON.parse(localStorage.getItem('products')||'[]');
-function save(){
-  localStorage.setItem('products',JSON.stringify(products));
-  window.dispatchEvent(new StorageEvent('storage',{key:'products',newValue:JSON.stringify(products)}));
-}
+          <label>Image URL (first image):</label>
+          <input id="image" placeholder="https://picsum.photos/400">
 
-/* === TOAST === */
-function toast(msg){
-  const t=document.createElement('div');
-  t.className='toast'; t.textContent=msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),1800);
-}
+          <div class="controls">
+            <button type="submit" class="primary">💾 Save Product</button>
+            <button type="button" id="clearForm" class="ghost">Clear</button>
+            <button type="button" class="ghost" id="backToShop">⬅ Back to Shop</button>
+          </div>
+        </form>
+      </fieldset>
 
-/* === RENDER TABLE === */
-function renderTable(){
-  const c=el('productTable');
-  if(!products.length){
-    c.innerHTML='<p style="color:var(--muted)">No products available yet.</p>';
-    el('bulkDeleteBtn').style.display='none';
-    return;
-  }
-  c.innerHTML=`<table>
-    <thead><tr><th><input type="checkbox" id="selectAll"></th><th>Image</th><th>Title</th><th>Category</th><th>Price</th><th>Discount</th><th>Actions</th></tr></thead>
-    <tbody>${products.map(p=>`
-      <tr>
-        <td><input type="checkbox" class="select" data-id="${p.id}"></td>
-        <td><img src="${p.image}" width="50" height="50" style="border-radius:6px"></td>
-        <td>${p.title}</td>
-        <td>${p.category}</td>
-        <td style="color:var(--success)">₹${p.price}</td>
-        <td>${p.discountPrice?`₹${p.discountPrice}`:'—'}</td>
-        <td>
-          <button class='ghost' onclick="editProduct(${p.id})">✏ Edit</button>
-          <button class='ghost' onclick="deleteProduct(${p.id})">🗑 Delete</button>
-        </td>
-      </tr>`).join('')}
-    </tbody></table>`;
-  el('bulkDeleteBtn').style.display='block';
-  el('selectAll').onchange=e=>{
-    document.querySelectorAll('.select').forEach(cb=>cb.checked=e.target.checked);
-  };
-}
+      <!-- Excel Import -->
+      <fieldset>
+        <legend>📥 Import from Excel</legend>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+        <div class="controls">
+          <button id="importBtn" class="primary">Import Excel</button>
+          <button id="previewBtn" class="ghost" title="Preview parsed rows (no save)">Preview File</button>
+          <div style="flex:1;text-align:right"><span class="small">Optional: add a column "ID" to keep existing ids, otherwise new ids are generated.</span></div>
+        </div>
+        <div id="previewArea" style="margin-top:10px;display:none"></div>
+      </fieldset>
 
-/* === ADD/EDIT PRODUCT === */
-el('productForm').onsubmit=e=>{
-  e.preventDefault();
-  const pid=el('pid').value;
-  const newProduct={
-    id:pid?parseInt(pid):Date.now(),
-    title:el('title').value.trim(),
-    category:el('category').value.trim()||'General',
-    price:parseInt(el('price').value)||0,
-    discountPrice:parseInt(el('discountPrice').value)||0,
-    image:el('image').value.trim()||'https://picsum.photos/400'
-  };
-  if(pid){
-    const idx=products.findIndex(p=>p.id==pid);
-    products[idx]=newProduct; toast('✅ Product updated');
-  }else{products.push(newProduct); toast('✅ Product added');}
-  el('productForm').reset(); el('pid').value=''; save(); renderTable();
-};
+      <div class="table-wrap" id="productTable"></div>
+      <button id="bulkDeleteBtn" class="ghost" style="display:none;margin-top:12px">🗑 Delete Selected Products</button>
+    </div>
 
-function editProduct(id){
-  const p=products.find(x=>x.id===id);
-  if(!p)return;
-  el('pid').value=p.id;
-  el('title').value=p.title;
-  el('category').value=p.category;
-  el('price').value=p.price;
-  el('discountPrice').value=p.discountPrice;
-  el('image').value=p.image;
-  toast('✏ Edit mode active');
-}
+    <div id="denied" class="denied" style="display:none">🚫 Access Denied. Please open this page from Admin Dashboard.</div>
 
-function deleteProduct(id){
-  if(!confirm('Delete this product?'))return;
-  products=products.filter(p=>p.id!==id);
-  save(); renderTable(); toast('🗑 Product deleted');
-}
+    <footer>© 2025 Trendspy | Secure Product Manager</footer>
+  </div>
 
-/* === BULK DELETE === */
-el('bulkDeleteBtn').onclick=()=>{
-  const selected=[...document.querySelectorAll('.select:checked')].map(cb=>+cb.dataset.id);
-  if(!selected.length)return toast('No products selected');
-  if(!confirm('Delete selected products?'))return;
-  products=products.filter(p=>!selected.includes(p.id));
-  save(); renderTable(); toast('🗑 Selected products deleted');
-};
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child, remove } 
+      from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-/* === IMPORT FROM EXCEL === */
-el('importBtn').onclick=()=>{
-  const file=el('fileInput').files[0];
-  if(!file)return alert('Please select an Excel file first!');
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-    const sheet=wb.Sheets[wb.SheetNames[0]];
-    const json=XLSX.utils.sheet_to_json(sheet);
-    const imported=json.map((p,i)=>({
-      id:Date.now()+i,
-      title:p.Title||p.name||p.Product||`Item ${i+1}`,
-      price:parseInt(p.Price)||0,
-      discountPrice:parseInt(p.DiscountPrice)||0,
-      category:p.Category||'General',
-      image:p.Image||`https://picsum.photos/400?random=${i+1}`
-    }));
-    products=[...products,...imported];
-    save(); renderTable(); toast('📥 Imported successfully!');
-  };
-  reader.readAsArrayBuffer(file);
-};
+    /* ================== FIREBASE CONFIG ================== */
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "trendspy-3ba6d.firebaseapp.com",
+      databaseURL: "https://trendspy-3ba6d-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "trendspy-3ba6d",
+      storageBucket: "trendspy-3ba6d.appspot.com",
+      messagingSenderId: "1064401414241",
+      appId: "YOUR_APP_ID"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-/* === INIT === */
-renderTable();
-window.addEventListener('storage',()=>location.reload());
-</script>
+    /* ================== AUTH GUARD ================== */
+    const el = id => document.getElementById(id);
+    const urlParams = new URLSearchParams(window.location.search);
+    const authKey = urlParams.get('auth');
+
+    if (authKey !== 'trendspy-admin') {
+      el('main').style.display = 'none';
+      el('denied').style.display = 'block';
+      // still initialize theme toggles so admin preview looks fine even on denied
+      initTheme();
+      throw new Error('Unauthorized Access');
+    }
+
+    /* ================== THEME (Option C: header + floating) ================== */
+    // We'll read/save both keys (trendspy_theme and theme) to play nicely with other pages
+    function getStoredTheme(){
+      return localStorage.getItem('trendspy_theme') || localStorage.getItem('theme') || null;
+    }
+    function setStoredTheme(mode){
+      localStorage.setItem('trendspy_theme', mode);
+      localStorage.setItem('theme', mode);
+    }
+    function applyTheme(mode){
+      if(mode === 'light') document.body.classList.add('light');
+      else document.body.classList.remove('light');
+      // update UI pieces
+      const floatingLabel = el('floatingLabel');
+      const floatingIcon = el('floatingIcon');
+      if(mode === 'light'){
+        if(floatingLabel) floatingLabel.textContent = 'Light';
+        if(floatingIcon) floatingIcon.textContent = '☀️';
+        el('toggleKnob').style.transform = 'translateX(22px)';
+      } else {
+        if(floatingLabel) floatingLabel.textContent = 'Dark';
+        if(floatingIcon) floatingIcon.textContent = '🌓';
+        el('toggleKnob').style.transform = '';
+      }
+    }
+    function toggleTheme(){
+      const cur = getStoredTheme() || (document.body.classList.contains('light') ? 'light' : 'dark');
+      const next = cur === 'light' ? 'dark' : 'light';
+      setStoredTheme(next);
+      applyTheme(next);
+    }
+    function initTheme(){
+      const stored = getStoredTheme() || 'dark';
+      applyTheme(stored);
+    }
+
+    // hook theme toggles
+    el('headerThemeToggle').addEventListener('click', ()=> {
+      toggleTheme();
+    });
+    el('floatingToggle').addEventListener('click', ()=> {
+      toggleTheme();
+    });
+    // ensure initial
+    initTheme();
+
+    /* Back buttons redirection */
+    el('backToDashboard').onclick = ()=> { window.location.href = 'shop.html?auth=trendspy-admin'; };
+    el('backToShop').onclick = ()=> { window.location.href = 'shop.html'; };
+
+    /* ================== STATE ================== */
+    let products = []; // array of products
+    let productsMap = {}; // id->product
+    let fileCache = null; // preview rows
+
+    /* ================== HELPERS ================== */
+    function toast(msg, ms = 1800) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), ms);
+    }
+
+    function normalizeProduct(p) {
+      return {
+        id: p.id,
+        title: p.title || '',
+        price: Number(p.price || 0),
+        category: p.category || 'General',
+        desc: p.desc || '',
+        variants: Array.isArray(p.variants) ? p.variants : (p.variants ? p.variants : ['One Size']),
+        images: Array.isArray(p.images) ? p.images : (p.images ? p.images : [])
+      };
+    }
+
+    function extractImagesFromRow(row, idxForFallback) {
+      const images = [];
+      for (let k = 1; k <= 12; k++) {
+        const key1 = 'image' + k;
+        const key2 = 'image ' + k;
+        if (row[key1] || row[key2]) {
+          const val = (row[key1] || row[key2] || '').toString();
+          if (val.trim()) splitAndPushImageUrls(images, val);
+        }
+      }
+      ['image','images','img','photo','photos','image_url','imageurl'].forEach(k=>{
+        if(row[k]) splitAndPushImageUrls(images, String(row[k]));
+      });
+      Object.keys(row).forEach(h=>{
+        if(/^image[\s_-]?[a-z0-9]*$/i.test(h) || /img|photo/i.test(h)) {
+          const val = String(row[h] || '');
+          if(val.trim()) splitAndPushImageUrls(images, val);
+        }
+      });
+      const clean = [...new Set(images.map(s => s.trim()).filter(Boolean))];
+      if (!clean.length) {
+        const cat = (row['category'] || row['Category'] || '').toString().trim();
+        const fallback = fallbackImageUrl(idxForFallback, cat);
+        return [fallback];
+      }
+      return clean;
+    }
+
+    function splitAndPushImageUrls(imagesArr, value) {
+      const parts = value.split(/\||,|;|\n/).map(s=>s.trim()).filter(Boolean);
+      parts.forEach(p=>imagesArr.push(p));
+    }
+
+    function fallbackImageUrl(idx, category) {
+      if (category) {
+        return `https://source.unsplash.com/collection/190727/800x800?${encodeURIComponent(category)}`;
+      }
+      return `https://picsum.photos/seed/trendspy-${idx}/800/800`;
+    }
+
+    function extractVariantsFromRow(row) {
+      const candidates = [];
+      for (let i = 1; i <= 12; i++) {
+        const k1 = 'variant' + i;
+        const k2 = 'variant ' + i;
+        if (row[k1] || row[k2]) {
+          const v = (row[k1] || row[k2] || '').toString().trim();
+          if (v) candidates.push(v);
+        }
+      }
+      const multi = (row['variants'] || row['Variants'] || row['Variant'] || '').toString().trim();
+      if (multi) {
+        multi.split(/\||,|;/).map(s=>s.trim()).filter(Boolean).forEach(x=>candidates.push(x));
+      }
+      const out = [...new Set(candidates)].filter(Boolean);
+      return out.length ? out : ['One Size'];
+    }
+
+    function parsePrice(v) {
+      if (v === undefined || v === null) return 0;
+      const n = Number(String(v).toString().replace(/[^\d.-]/g, '') || 0);
+      return isNaN(n) ? 0 : Math.round(n);
+    }
+
+    /* ================== FIREBASE CRUD ================== */
+    async function loadProducts() {
+      try {
+        const snapshot = await get(child(ref(db), 'products'));
+        const data = snapshot.exists() ? snapshot.val() : {};
+        products = Object.keys(data).map(k => normalizeProduct(data[k]));
+        productsMap = {};
+        products.forEach(p => productsMap[p.id] = p);
+        renderTable();
+      } catch (err) {
+        console.error('Load products error', err);
+        products = [];
+        productsMap = {};
+        renderTable();
+        toast('Unable to load products from Firebase');
+      }
+    }
+
+    async function saveProductToFirebase(p) {
+      if (!p || !p.id) throw new Error('Invalid product id');
+      const payload = normalizeProduct(p);
+      await set(ref(db, 'products/' + payload.id), payload);
+      productsMap[payload.id] = payload;
+    }
+
+    async function deleteProductFromFirebase(id) {
+      await remove(ref(db, 'products/' + id));
+      delete productsMap[id];
+    }
+
+    /* ================== RENDERING ================== */
+    function renderTable() {
+      const container = el('productTable');
+      const list = Object.values(productsMap || {}).sort((a,b)=> (b.id||0) - (a.id||0));
+      if (!list.length) {
+        container.innerHTML = '<p class="small" style="color:var(--muted)">No products available yet.</p>';
+        el('bulkDeleteBtn').style.display = 'none';
+        return;
+      }
+      const rows = list.map(p => `
+        <tr>
+          <td style="width:36px"><input type="checkbox" class="select" data-id="${p.id}"></td>
+          <td style="width:64px"><img src="${(p.images && p.images[0]) || ''}" width="56" height="56" alt=""></td>
+          <td style="min-width:200px"><div style="font-weight:700">${escapeHtml(p.title)}</div><div class="small truncated">${escapeHtml(p.desc || '')}</div></td>
+          <td>${escapeHtml(p.category || '')}</td>
+          <td style="color:var(--success)">₹${p.price}</td>
+          <td><span class="tag">${(p.images||[]).length} imgs</span> <span class="tag">${(p.variants||[]).length} variants</span></td>
+          <td style="white-space:nowrap">
+            <button class="ghost" onclick="editProduct(${p.id})">✏ Edit</button>
+            <button class="ghost" onclick="deleteProduct(${p.id})">🗑 Delete</button>
+          </td>
+        </tr>
+      `).join('');
+      container.innerHTML = `<table>
+        <thead>
+          <tr><th><input type="checkbox" id="selectAll"></th><th>Image</th><th>Title / Desc</th><th>Category</th><th>Price</th><th>Meta</th><th>Actions</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+      el('bulkDeleteBtn').style.display = 'block';
+      el('selectAll').onchange = (e) => {
+        document.querySelectorAll('.select').forEach(cb => cb.checked = e.target.checked);
+      };
+    }
+
+    function escapeHtml(s) {
+      if (s === undefined || s === null) return '';
+      return String(s).replace(/[&<>"']/g, function (m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+      });
+    }
+
+    /* ================== FORM (Manual) ================== */
+    el('productForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const pid = el('pid').value;
+      const p = {
+        id: pid ? Number(pid) : Date.now(),
+        title: el('title').value.trim(),
+        price: parsePrice(el('price').value),
+        category: el('category').value.trim() || 'General',
+        desc: el('desc').value.trim() || '',
+        variants: parseVariantsInput(el('variants').value),
+        images: el('image').value.trim() ? [el('image').value.trim()] : [fallbackImageUrl(Date.now(), el('category').value.trim())]
+      };
+      try {
+        await saveProductToFirebase(p);
+        toast(pid ? '✅ Product updated' : '✅ Product added');
+        el('productForm').reset();
+        el('pid').value = '';
+        loadProducts();
+      } catch (err) {
+        console.error(err);
+        toast('Unable to save product');
+      }
+    };
+
+    el('clearForm').onclick = ()=> {
+      el('productForm').reset();
+      el('pid').value = '';
+      toast('Form cleared');
+    };
+
+    function parseVariantsInput(v) {
+      if (!v) return ['One Size'];
+      const parts = String(v).split(/\||,|;/).map(s=>s.trim()).filter(Boolean);
+      return parts.length ? [...new Set(parts)] : ['One Size'];
+    }
+
+    /* ================== EDIT / DELETE (global functions) ================== */
+    window.editProduct = (id) => {
+      const p = productsMap[id];
+      if (!p) return toast('Product not found');
+      el('pid').value = p.id;
+      el('title').value = p.title;
+      el('price').value = p.price;
+      el('category').value = p.category;
+      el('desc').value = p.desc || '';
+      el('variants').value = (p.variants || []).join(',');
+      el('image').value = (p.images && p.images[0]) || '';
+      toast('✏ Edit mode active');
+    };
+
+    window.deleteProduct = async (id) => {
+      if (!confirm('Delete this product?')) return;
+      try {
+        await deleteProductFromFirebase(id);
+        toast('🗑 Product deleted');
+        loadProducts();
+      } catch (err) {
+        console.error(err);
+        toast('Unable to delete');
+      }
+    };
+
+    /* ================== BULK DELETE ================== */
+    el('bulkDeleteBtn').onclick = async () => {
+      const selected = [...document.querySelectorAll('.select:checked')].map(cb => cb.dataset.id);
+      if (!selected.length) return toast('No products selected');
+      if (!confirm('Delete selected products?')) return;
+      try {
+        for (const id of selected) {
+          await deleteProductFromFirebase(id);
+        }
+        toast('🗑 Selected products deleted');
+        loadProducts();
+      } catch (err) {
+        console.error(err);
+        toast('Bulk delete failed');
+      }
+    };
+
+    /* ================== EXCEL PARSING & IMPORT ================== */
+    el('previewBtn').onclick = () => {
+      const file = el('fileInput').files[0];
+      if (!file) return alert('Please select an Excel file first!');
+      previewParsedExcelFile(file);
+    };
+
+    el('importBtn').onclick = () => {
+      const file = el('fileInput').files[0];
+      if (!file) return alert('Please select an Excel file first!');
+      importExcelFile(file);
+    };
+
+    function previewParsedExcelFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        fileCache = json;
+        const previewArea = el('previewArea');
+        previewArea.style.display = 'block';
+        const firstRows = json.slice(0, 10).map((r, idx) => {
+          const title = r.Title || r.title || r.Name || r.Product || '';
+          const price = r.Price || r.price || '';
+          const cat = r.Category || r.category || '';
+          return `<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.04)"><b>${escapeHtml(title)}</b> — ₹${escapeHtml(price)} <span class="small">(${escapeHtml(cat)})</span></div>`;
+        }).join('');
+        previewArea.innerHTML = `<div class="small" style="margin-bottom:8px">Preview (first ${Math.min(10, json.length)} rows):</div>${firstRows}`;
+        toast('Preview ready');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function importExcelFile(file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          if (!json.length) return toast('No rows found in sheet');
+
+          for (let i = 0; i < json.length; i++) {
+            const row = json[i];
+            let id = null;
+            if (row.ID || row.Id || row.id) {
+              const tryNum = Number(String(row.ID || row.Id || row.id).trim());
+              id = (tryNum && !isNaN(tryNum)) ? tryNum : String(row.ID || row.Id || row.id).trim();
+            } else {
+              id = Date.now() + i;
+            }
+            const title = (row.Title || row.title || row.Name || row.Product || '').toString().trim();
+            if (!title) { console.warn('Skipping row without title', row); continue; }
+            const price = parsePrice(row.Price || row.price || row.Amount || row.cost || 0);
+            const category = (row.Category || row.category || '').toString().trim() || 'General';
+            const desc = (row.Desc || row.desc || row.Description || row.description || '').toString().trim();
+            const variants = extractVariantsFromRow(row);
+            const images = extractImagesFromRow(row, i);
+            const newP = { id, title, price, category, desc, variants, images };
+            await saveProductToFirebase(newP);
+          }
+          toast('📥 Imported successfully!');
+          el('fileInput').value = '';
+          loadProducts();
+        } catch (err) {
+          console.error('Import error', err);
+          toast('Import failed — check console');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    /* ================== INIT ================== */
+    await loadProducts();
+  </script>
 </body>
 </html>
