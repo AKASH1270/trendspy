@@ -53,13 +53,25 @@ if (!currentOrder) {
 }
 
 /* Save Order to Firebase */
+import { get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
 async function saveOrderToFirebase(order) {
-  if (!user?.contact) {
-    alert("User not logged in!");
+  if (!user?.contact) return;
+
+  const orderRef = ref(db, `orders/${user.contact}/${order.id}`);
+
+  // ❌ Stop duplicate overwriting
+  const existing = await get(orderRef);
+
+  if (existing.exists()) {
+    console.log("Order already exists — skipping duplicate save.");
     return;
   }
-  await set(ref(db, `orders/${user.contact}/${order.id}`), order);
+
+  // ✔ Save once
+  await set(orderRef, order);
 }
+
 
 /* Address Modal Trigger */
 payNow.onclick = () => {

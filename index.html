@@ -923,7 +923,35 @@ checkoutBtn.onclick = ()=>{
 };
 
 /* go to cart (full) */
-goToCartBtn.onclick = ()=> window.location.href = 'cart.html';
+checkoutBtn.onclick = () => {
+  if(!user){
+    openLogin();
+    return;
+  }
+
+  if(!Object.keys(cart).length){
+    toast('Cart is empty');
+    return;
+  }
+
+  const subtotal = Object.values(cart).reduce((s,i)=> s + (i.price*i.qty), 0);
+  const order = {
+    id: 'ORD' + Date.now(),
+    user: user.name,
+    contact: user.contact,
+    items: cart,
+    total: '₹' + subtotal,
+    status: 'Pending',
+    trackingStage: 0,
+    ts: new Date().toLocaleString()
+  };
+
+  localStorage.setItem('currentOrder', JSON.stringify(order));
+
+  // ⭐ REDIRECT TO PAYMENT PAGE ⭐
+  window.location.href = 'payment.html';
+};
+
 
 /* ================= WISHLIST ================= */
 function toggleWishlist(id){

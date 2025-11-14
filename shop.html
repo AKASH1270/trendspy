@@ -353,28 +353,50 @@ document.getElementById('openOrders').onclick = ()=> { window.location.href='ord
 document.getElementById('openReports').onclick = ()=> { window.location.href='reports.html'; };
 
 /* Load Orders */
-function loadOrders(){
-  const ordersRef=ref(db,'orders');
-  onValue(ordersRef,snapshot=>{
-    orders=[];
-    snapshot.forEach(user=>{
-      user.forEach(order=>orders.push(order.val()));
-    });
-    filteredOrders=orders;
-    renderOrders();
-    renderCharts();
-    // update quick numbers
-    el('lastUpdated').textContent = new Date().toLocaleString();
-    // simple counts
-    const counts = { Pending:0, Accepted:0 };
-    orders.forEach(o=>{ counts[o.status] = (counts[o.status]||0) + 1; });
-    try{ if(el('pendingCount')) el('pendingCount').textContent = counts['Pending']||0; if(el('acceptedCount')) el('acceptedCount').textContent = counts['Accepted']||0; }catch(e){}
-  },err=>{
-    console.error("Error loading orders:",err);
-    dbStatus.textContent="Database: Error ❌";
-    dbStatus.style.background="#ef4444";
-  });
+/* Load Orders */
+function loadOrders() {
+  const ordersRef = ref(db, 'orders');
+
+  onValue(
+    ordersRef,
+    (snapshot) => {
+      orders = [];
+      let seenOrderIds = new Set();
+
+      snapshot.forEach((user) => {
+        user.forEach((order) => {
+          const o = order.val();
+          if (!seenOrderIds.has(o.id)) {
+            seenOrderIds.add(o.id);
+            orders.push(o);
+          }
+        });
+      });
+
+      filteredOrders = orders;
+      renderOrders();
+      renderCharts();
+
+      el("lastUpdated").textContent = new Date().toLocaleString();
+
+      // simple counts
+      const counts = { Pending: 0, Accepted: 0 };
+      orders.forEach((o) => {
+        counts[o.status] = (counts[o.status] || 0) + 1;
+      });
+
+      el("pendingCount").textContent = counts["Pending"] || 0;
+      el("acceptedCount").textContent = counts["Accepted"] || 0;
+    },
+
+    (err) => {
+      console.error("Error loading orders:", err);
+      dbStatus.textContent = "Database: Error ❌";
+      dbStatus.style.background = "#ef4444";
+    }
+  );
 }
+
 
 /* Render Orders */
 function renderOrders(){
